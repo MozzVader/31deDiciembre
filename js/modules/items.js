@@ -4,6 +4,16 @@
 import { getAll, create, update, remove, getOne } from '../db.js';
 import { renderWorkspace, setBreadcrumbs, updateBadge, showToast, confirm, escapeHtml, createSelect } from '../ui.js';
 
+/** Generate a slug from a name: 'Fernet' → 'item_fernet' */
+function generateSlug(prefix, name) {
+  const base = name
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  return `${prefix}_${base}`;
+}
+
 let currentTab = 'items';
 
 export async function renderItemsView() {
@@ -80,21 +90,19 @@ async function renderItemsList(items) {
     `;
   }
 
-  const allItems = items; // for combination dropdowns
-
   return `
     <div class="card-grid">
       ${items.map(item => `
         <div class="card" onclick="window.location.hash='items/${item.id}'">
           <div class="card-header">
-            <div style="font-size:24px;">${item.iconUrl ? `<img src="${item.iconUrl}" style="width:32px;height:32px;border-radius:6px;">` : '&#128230;'}</div>
+            <div style="font-size:24px;">&#128230;</div>
             <div class="card-body">
               <div class="card-title">${escapeHtml(item.name)}</div>
-              <div class="card-description">${escapeHtml(item.description || '')}</div>
+              <div class="card-description">${escapeHtml(item.description || 'Sin descripción')}</div>
             </div>
           </div>
-          <div class="card-meta">
-            ${item.isCombinable ? '<span class="card-badge">Combinable</span>' : ''}
+          <div class="card-meta" style="flex-wrap:wrap;">
+            <span class="text-xs font-mono">${escapeHtml(item.slug || '')}</span>
             ${item.combinations?.length ? `<span class="card-badge">${item.combinations.length} combinación${item.combinations.length !== 1 ? 'es' : ''}</span>` : ''}
           </div>
         </div>
@@ -122,12 +130,12 @@ export async function renderItemForm(itemId = null) {
   }
 
   const allItems = (await getAll('items')).filter(i => i.id !== itemId);
-  const flags = await getAll('flags');
+  const dialogues = await getAll('dialogues');
   const combinations = item?.combinations || [];
 
   // Store on window for addCombo()
   window._availableComboItems = allItems;
-  window._availableComboFlags = flags;
+  window._availableComboDialogues = dialogues;
 
   renderWorkspace(`
     <div class="detail-header">
@@ -140,30 +148,25 @@ export async function renderItemForm(itemId = null) {
           <div class="form-group">
             <label class="form-label">Nombre</label>
             <input type="text" class="form-input" id="item-name" placeholder="Ej: Fernet" value="${escapeHtml(item?.name || '')}" required>
+            <div class="form-hint">El nombre visible del item (para el jugador).</div>
           </div>
           <div class="form-group">
-            <label class="form-label">Icono URL</label>
-            <input type="text" class="form-input" id="item-icon" placeholder="URL del ícono (opcional)" value="${escapeHtml(item?.iconUrl || '')}">
+            <label class="form-label">Slug</label>
+            <input type="text" class="form-input font-mono" id="item-slug" placeholder="Ej: item_fernet" value="${escapeHtml(item?.slug || '')}">
+            <div class="form-hint">Código identificador. Se auto-genera del nombre.</div>
           </div>
         </div>
 
         <div class="form-group">
           <label class="form-label">Descripción</label>
-          <textarea class="form-textarea" id="item-description" placeholder="Descripción del objeto para el dev">${escapeHtml(item?.description || '')}</textarea>
+          <textarea class="form-textarea" id="item-description" placeholder="La botella de Fernet Branca, el elixir de la noche porteña">${escapeHtml(item?.description || '')}</textarea>
         </div>
 
         <div class="form-group">
-          <label class="form-checkbox">
-            <input type="checkbox" id="item-combinable" ${item?.isCombinable ? 'checked' : ''}>
-            <span class="form-checkbox-label">Es combinable con otros items</span>
-          </label>
-        </div>
-
-        <div class="form-group" id="combinations-section" style="display:${item?.isCombinable ? 'block' : 'none'}">
           <label class="form-label">Combinaciones</label>
-          <div class="form-hint">Definí qué pasa cuando se combina este item con otro. Ej: Fernet + Vaso = FernetServido</div>
+          <div class="form-hint">Definí qué pasa cuando se combina este item con otro. Ej: Fernet + Vaso = Vaso con Fernet</div>
           <div class="dynamic-array" id="combinations-container">
-            ${combinations.map((combo, i) => renderComboRow(combo, allItems, flags, i)).join('')}
+            ${combinations.map((combo, i) => renderComboRow(combo, allItems, dialogues, i)).join('')}
           </div>
           <button type="button" class="dynamic-array-add mt-2" onclick="window.addCombo()">+ Agregar Combinación</button>
         </div>
@@ -176,22 +179,28 @@ export async function renderItemForm(itemId = null) {
     </div>
   `);
 
-  // Toggle combinations section
-  document.getElementById('item-combinable').onchange = (e) => {
-    document.getElementById('combinations-section').style.display = e.target.checked ? 'block' : 'none';
-  };
+  // Auto-generate slug from name
+  const slugInput = document.getElementById('item-slug');
+  const nameInput = document.getElementById('item-name');
+  nameInput.addEventListener('input', () => {
+    if (!slugInput.dataset.manual) {
+      slugInput.value = generateSlug('item', nameInput.value);
+    }
+  });
+  slugInput.addEventListener('input', () => {
+    slugInput.dataset.manual = '1';
+  });
 
   document.getElementById('item-form').onsubmit = async (e) => {
     e.preventDefault();
-    const isCombinable = document.getElementById('item-combinable').checked;
     const data = {
+      slug: document.getElementById('item-slug').value.trim(),
       name: document.getElementById('item-name').value.trim(),
-      iconUrl: document.getElementById('item-icon').value.trim(),
       description: document.getElementById('item-description').value.trim(),
-      isCombinable,
-      combinations: isCombinable ? collectCombos() : []
+      combinations: collectCombos()
     };
 
+    if (!data.slug) data.slug = generateSlug('item', data.name);
     if (!data.name) {
       showToast('El nombre es obligatorio', 'error');
       return;
@@ -224,7 +233,7 @@ export async function renderItemForm(itemId = null) {
   }
 }
 
-function renderComboRow(combo = {}, items = [], flags = [], index = 0) {
+function renderComboRow(combo = {}, items = [], dialogues = [], index = 0) {
   return `
     <div class="dynamic-array-item" data-combo-index="${index}">
       <div class="dynamic-array-item-header">
@@ -233,17 +242,25 @@ function renderComboRow(combo = {}, items = [], flags = [], index = 0) {
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">Combinar con</label>
-          ${createSelect(items, combo.combineWithItemId || '', '— Item —')}
+          <label class="form-label">Combinar con (Item)</label>
+          ${createSelect(items, combo.withItemSlug || combo.combineWithItemId || '', '— Seleccionar item —')}
         </div>
         <div class="form-group">
           <label class="form-label">Resultado (Item)</label>
-          ${createSelect(items, combo.resultItemId || '', '— Item resultado —')}
+          ${createSelect(items, combo.resultItemSlug || combo.resultItemId || '', '— Item resultado —')}
         </div>
       </div>
-      <div class="form-group" style="margin-bottom:0">
-        <label class="form-label">Flag al combinar</label>
-        ${createSelect(flags, combo.resultFlagId || '', '— Flag resultado (opcional) —')}
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-checkbox">
+            <input type="checkbox" class="combo-consumes" ${combo.consumesOtherItem ? 'checked' : ''}>
+            <span class="form-checkbox-label">Se consume el otro item</span>
+          </label>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Diálogo al combinar</label>
+          ${createSelect(dialogues, combo.resultDialogueSlug || '', '— Opcional —')}
+        </div>
       </div>
     </div>
   `;
@@ -255,11 +272,12 @@ function collectCombos() {
   const combos = [];
   items.forEach(item => {
     const selects = item.querySelectorAll('.form-select');
-    const combineWithItemId = selects[0]?.value || '';
-    const resultItemId = selects[1]?.value || '';
-    const resultFlagId = selects[2]?.value || '';
-    if (combineWithItemId) {
-      combos.push({ combineWithItemId, resultItemId, resultFlagId });
+    const withItemSlug = selects[0]?.value || '';
+    const resultItemSlug = selects[1]?.value || '';
+    const resultDialogueSlug = selects[2]?.value || '';
+    const consumesOtherItem = item.querySelector('.combo-consumes')?.checked || false;
+    if (withItemSlug) {
+      combos.push({ withItemSlug, resultItemSlug, consumesOtherItem, resultDialogueSlug });
     }
   });
   return combos;
@@ -273,20 +291,20 @@ window.addCombo = async function() {
 
   // Try cached data first; fetch from DB if empty
   let itemsList = window._availableComboItems || [];
-  let flagsList = window._availableComboFlags || [];
+  let dialoguesList = window._availableComboDialogues || [];
 
   if (itemsList.length === 0) {
     try {
-      const [allItems, allFlags] = await Promise.all([
+      const [allItems, allDialogues] = await Promise.all([
         getAll('items'),
-        getAll('flags')
+        getAll('dialogues')
       ]);
       itemsList = allItems;
-      flagsList = allFlags;
+      dialoguesList = allDialogues;
       window._availableComboItems = itemsList;
-      window._availableComboFlags = flagsList;
+      window._availableComboDialogues = dialoguesList;
     } catch (err) {
-      console.error('Error fetching items/flags:', err);
+      console.error('Error fetching data:', err);
     }
   }
 
@@ -298,17 +316,25 @@ window.addCombo = async function() {
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">Combinar con</label>
-          ${createSelect(itemsList, '', '— Item —')}
+          <label class="form-label">Combinar con (Item)</label>
+          ${createSelect(itemsList, '', '— Seleccionar item —')}
         </div>
         <div class="form-group">
           <label class="form-label">Resultado (Item)</label>
           ${createSelect(itemsList, '', '— Item resultado —')}
         </div>
       </div>
-      <div class="form-group" style="margin-bottom:0">
-        <label class="form-label">Flag al combinar</label>
-        ${createSelect(flagsList, '', '— Flag resultado (opcional) —')}
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-checkbox">
+            <input type="checkbox" class="combo-consumes" checked>
+            <span class="form-checkbox-label">Se consume el otro item</span>
+          </label>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Diálogo al combinar</label>
+          ${createSelect(dialoguesList, '', '— Opcional —')}
+        </div>
       </div>
     </div>
   `;

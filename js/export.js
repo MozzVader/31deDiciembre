@@ -34,10 +34,12 @@ export async function exportProject() {
     // ============================================
     const roomSlugMap = {};    // Firestore ID → slug
     const charSlugMap = {};    // Firestore ID → slug
+    const itemSlugMap = {};    // Firestore ID → slug
     const flagSlugMap = {};    // Firestore ID → name (flag name IS the slug)
 
     rooms.forEach(r => { roomSlugMap[r.id] = r.slug || r.id; });
     characters.forEach(c => { charSlugMap[c.id] = c.slug || c.id; });
+    items.forEach(i => { itemSlugMap[i.id] = i.slug || i.id; });
     flags.forEach(f => { flagSlugMap[f.id] = f.name; });
 
     // ============================================
@@ -75,11 +77,26 @@ export async function exportProject() {
         defaultValue: flag.state || false
       })),
 
-      items: items.map(item => ({
-        slug: item.slug || item.id,
-        name: item.name,
-        description: item.description || ""
-      })),
+      items: items.map(item => {
+        const combos = (item.combinations || []).map(c => ({
+          withItemSlug: itemSlugMap[c.withItemSlug] || itemSlugMap[c.combineWithItemId] || c.withItemSlug || null,
+          resultItemSlug: itemSlugMap[c.resultItemSlug] || itemSlugMap[c.resultItemId] || c.resultItemSlug || null,
+          consumesOtherItem: c.consumesOtherItem ?? true,
+          resultDialogueSlug: c.resultDialogueSlug || null
+        })).filter(c => c.withItemSlug);
+
+        const exported = {
+          slug: item.slug || item.id,
+          name: item.name,
+          description: item.description || ""
+        };
+
+        if (combos.length > 0) {
+          exported.combinations = combos;
+        }
+
+        return exported;
+      }),
 
       triggers: events.map(event => ({
         slug: event.slug || event.id,

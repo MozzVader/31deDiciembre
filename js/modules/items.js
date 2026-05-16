@@ -404,7 +404,9 @@ window.addCombo = async function() {
 
 const ITEM_INTERACTION_TYPE_LABELS = {
   examine: 'Examinar (Clic Derecho)',
-  use: 'Usar (Clic Izquierdo)'
+  use: 'Usar (Clic Izquierdo)',
+  open: 'Abrir',
+  close: 'Cerrar'
 };
 
 const ITEM_ACTION_LABELS = {
@@ -434,8 +436,10 @@ function renderItemInteractionRow(interaction, index, data) {
           <select class="form-select item-interaction-type" onchange="window.handleItemInteractionTypeChange(this)">
             <option value="examine" ${type === 'examine' ? 'selected' : ''}>Examinar (Clic Derecho)</option>
             <option value="use" ${type === 'use' ? 'selected' : ''}>Usar (Clic Izquierdo)</option>
+            <option value="open" ${type === 'open' ? 'selected' : ''}>Abrir</option>
+            <option value="close" ${type === 'close' ? 'selected' : ''}>Cerrar</option>
           </select>
-          <div class="form-hint">Examinar: el jugador mira el item. Usar: el jugador intenta usar el item activamente.</div>
+          <div class="form-hint">Examinar: mirar el item. Usar: usar el item. Abrir/Cerrar: para items con estados (cajas, puertas, recipientes).</div>
         </div>
 
         <div class="form-group" style="margin-bottom:0;">

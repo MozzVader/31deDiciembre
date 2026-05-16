@@ -381,6 +381,9 @@ function renderHotspotCard(hotspot, index, data) {
 
 const INTERACTION_TYPE_LABELS = {
   examine: 'Examinar (Mirar)',
+  use: 'Usar',
+  open: 'Abrir',
+  close: 'Cerrar',
   use_item: 'Usar Item sobre esto',
   pick_up: 'Recoger (Pick Up)',
   talk_to: 'Hablar con'
@@ -408,6 +411,9 @@ function renderInteractionRow(interaction, index, data) {
             <label class="form-label">Tipo de Interacción</label>
             <select class="form-select interaction-type" onchange="window.handleInteractionTypeChange(this)">
               <option value="examine" ${type === 'examine' ? 'selected' : ''}>Examinar (Mirar)</option>
+              <option value="use" ${type === 'use' ? 'selected' : ''}>Usar</option>
+              <option value="open" ${type === 'open' ? 'selected' : ''}>Abrir</option>
+              <option value="close" ${type === 'close' ? 'selected' : ''}>Cerrar</option>
               <option value="use_item" ${type === 'use_item' ? 'selected' : ''}>Usar Item sobre esto</option>
               <option value="pick_up" ${type === 'pick_up' ? 'selected' : ''}>Recoger (Pick Up)</option>
               <option value="talk_to" ${type === 'talk_to' ? 'selected' : ''}>Hablar con</option>

@@ -1,7 +1,7 @@
 // ============================================
 // Módulo: Habitaciones (Rooms) — con Hotspots
 // ============================================
-import { getAll, create, update, remove, getOne } from '../db.js';
+import { getAll, create, update, remove, getOne, getNodes } from '../db.js';
 import { renderWorkspace, setBreadcrumbs, updateBadge, showToast, confirm, escapeHtml, createSelect } from '../ui.js';
 
 /** Generate a slug from a name: 'Bar Principal' → 'room_bar_principal' */
@@ -252,6 +252,26 @@ export async function renderRoomForm(roomId = null) {
   // Attach hotspot name → slug auto-generation
   attachHotspotListeners();
 
+  // Load dialogue nodes for StartDialogue actions that already have a dialogue selected
+  document.querySelectorAll('.hs-action-card').forEach(async (actionCard) => {
+    const type = actionCard.querySelector('.hs-action-type')?.value;
+    if (type === 'StartDialogue') {
+      const dlgSlug = actionCard.querySelector('.hs-action-target')?.value;
+      if (dlgSlug) {
+        // Attach onchange listener for future changes
+        actionCard.querySelector('.hs-action-target').onchange = () =>
+          window.loadHsDialogueNodes(actionCard, actionCard.querySelector('.hs-action-target').value);
+        // Load existing nodes
+        await window.loadHsDialogueNodes(actionCard, dlgSlug);
+      } else {
+        // Attach onchange listener even without a pre-selected dialogue
+        actionCard.querySelector('.hs-action-target')?.addEventListener('change', function() {
+          window.loadHsDialogueNodes(actionCard, this.value);
+        });
+      }
+    }
+  });
+
   // Form submission
   document.getElementById('room-form').onsubmit = async (e) => {
     e.preventDefault();
@@ -499,9 +519,10 @@ function hsActionFieldsHtml(type, data, targetVal, valueVal) {
     case 'StartDialogue': {
       const dlgOpts = data.dialogues.map(d => ({ id: d.slug || d.id, name: d.name }));
       targetHtml = `<label class="form-label">Diálogo</label>
-        ${sel(dlgOpts, targetVal, '— Seleccionar diálogo —', 'hs-action-target')}`;
+        ${sel(dlgOpts, targetVal, '— Seleccionar diálogo —', 'hs-action-target')}
+        <div class="form-hint">Al seleccionar un diálogo se cargan sus nodos abajo.</div>`;
       valueHtml = `<label class="form-label">Nodo Inicial (opcional)</label>
-        <input type="text" class="form-input hs-action-value font-mono" placeholder="Ej: node_inicio" value="${escapeHtml(valueVal || '')}">
+        ${sel([], valueVal, '— (arranca desde el primer nodo) —', 'hs-action-node')}
         <div class="form-hint">Dejá vacío para arrancar desde el primer nodo.</div>`;
       break;
     }
@@ -624,7 +645,7 @@ function collectHsActions(interactionCard) {
     switch (type) {
       case 'StartDialogue':
         action.dialogueSlug = target || null;
-        action.nodeSlug = value || null;
+        action.nodeSlug = card.querySelector('.hs-action-node')?.value?.trim() || null;
         break;
       case 'AddItem':
       case 'RemoveItem':
@@ -775,6 +796,43 @@ window.handleHsActionTypeChange = function(select) {
   // Update the action title label
   const titleSpan = card.querySelector('.hs-action-title');
   if (titleSpan) titleSpan.textContent = HS_ACTION_LABELS[type] || type;
+
+  // Attach onchange to dialogue target to load nodes
+  if (type === 'StartDialogue') {
+    const targetSelect = card.querySelector('.hs-action-target');
+    if (targetSelect) {
+      targetSelect.onchange = () => window.loadHsDialogueNodes(card, targetSelect.value);
+    }
+  }
+};
+
+// ============================================
+// Load Dialogue Nodes (for StartDialogue in hotspots)
+// ============================================
+
+window.loadHsDialogueNodes = async function(actionCard, dialogueSlug) {
+  const nodeSelect = actionCard.querySelector('.hs-action-node');
+  if (!nodeSelect) return;
+
+  // Reset
+  nodeSelect.innerHTML = '<option value="">— (arranca desde el primer nodo) —</option>';
+
+  if (!dialogueSlug) return;
+
+  const data = window._roomFormData || {};
+  const dlg = data.dialogues.find(d => (d.slug || d.id) === dialogueSlug);
+  if (!dlg) return;
+
+  try {
+    const nodes = await getNodes(dlg.id);
+    const opts = nodes.map(n => ({
+      id: n.slug || n.id,
+      name: `${n.slug || n.id} — "${(n.text || '').slice(0, 40)}${(n.text || '').length > 40 ? '...' : ''}"`
+    }));
+    nodeSelect.innerHTML = createSelect(opts, '', '— (arranca desde el primer nodo) —');
+  } catch (err) {
+    console.error('Error loading dialogue nodes:', err);
+  }
 };
 
 // ============================================

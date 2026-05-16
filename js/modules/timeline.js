@@ -4,6 +4,16 @@
 import { getAll, create, update, remove, getOne } from '../db.js';
 import { renderWorkspace, setBreadcrumbs, updateBadge, showToast, confirm, escapeHtml, createSelect, showModal, closeModal } from '../ui.js';
 
+/** Generate a slug from a name: 'Don Rodolfo entra al bar' → 'event_don_rodolfo_entra_al_bar' */
+function generateSlug(prefix, name) {
+  const base = name
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  return `${prefix}_${base}`;
+}
+
 export async function renderTimelineList() {
   setBreadcrumbs([{ label: 'Cronología' }]);
   const events = await getAll('timeline');
@@ -54,6 +64,7 @@ export async function renderTimelineList() {
     return `
       <div class="timeline-event" onclick="window.location.hash='timeline/${event.id}'">
         <div class="timeline-event-name">${escapeHtml(event.eventName)}</div>
+        <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-bottom:4px;">${escapeHtml(event.slug || '')}</div>
         <div class="timeline-event-trigger">
           Trigger: <code>${escapeHtml(condType)}(${escapeHtml(flagName)}) = ${condValue}</code>
         </div>
@@ -105,9 +116,16 @@ export async function renderTimelineForm(eventId = null) {
     </div>
     <div class="form-container">
       <form id="event-form">
-        <div class="form-group">
-          <label class="form-label">Nombre del Evento</label>
-          <input type="text" class="form-input" id="event-name" placeholder='Ej: "Don Rodolfo entra al bar"' value="${escapeHtml(event?.eventName || '')}" required>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Nombre del Evento</label>
+            <input type="text" class="form-input" id="event-name" placeholder='Ej: "Don Rodolfo entra al bar"' value="${escapeHtml(event?.eventName || '')}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Slug</label>
+            <input type="text" class="form-input font-mono" id="event-slug" placeholder="Ej: event_don_rodolfo_entra" value="${escapeHtml(event?.slug || '')}">
+            <div class="form-hint">Código identificador. Se auto-genera del nombre.</div>
+          </div>
         </div>
 
         <div class="form-group">
@@ -156,6 +174,18 @@ export async function renderTimelineForm(eventId = null) {
     </div>
   `);
 
+  // Auto-generate slug from event name
+  const slugInput = document.getElementById('event-slug');
+  const nameInput = document.getElementById('event-name');
+  nameInput.addEventListener('input', () => {
+    if (!slugInput.dataset.manual) {
+      slugInput.value = generateSlug('event', nameInput.value);
+    }
+  });
+  slugInput.addEventListener('input', () => {
+    slugInput.dataset.manual = '1';
+  });
+
   // Trigger type change: update target placeholder
   document.getElementById('trigger-type').onchange = (e) => {
     const input = document.getElementById('trigger-target');
@@ -193,11 +223,13 @@ export async function renderTimelineForm(eventId = null) {
     else if (triggerType === 'DialogueEnd') triggerCondition.dialogueId = triggerTarget;
 
     const data = {
+      slug: document.getElementById('event-slug').value.trim(),
       eventName: document.getElementById('event-name').value.trim(),
       triggerCondition,
       actions: collectActions()
     };
 
+    if (!data.slug) data.slug = generateSlug('event', data.eventName);
     if (!data.eventName) {
       showToast('El nombre es obligatorio', 'error');
       return;

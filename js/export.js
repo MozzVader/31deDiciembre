@@ -36,11 +36,13 @@ export async function exportProject() {
     const charSlugMap = {};    // Firestore ID → slug
     const itemSlugMap = {};    // Firestore ID → slug
     const flagSlugMap = {};    // Firestore ID → name (flag name IS the slug)
+    const dlgSlugMap = {};     // Firestore ID → slug
 
     rooms.forEach(r => { roomSlugMap[r.id] = r.slug || r.id; });
     characters.forEach(c => { charSlugMap[c.id] = c.slug || c.id; });
     items.forEach(i => { itemSlugMap[i.id] = i.slug || i.id; });
     flags.forEach(f => { flagSlugMap[f.id] = f.name; });
+    dialogues.forEach(d => { dlgSlugMap[d.id] = d.slug || d.id; });
 
     // ============================================
     // Build the export JSON — slug-based
@@ -121,9 +123,13 @@ export async function exportProject() {
             base.target = action.target ? (roomSlugMap[action.target] || action.target) : null;
             base.exitDirection = action.exitDirection || null;
           } else if (action.type === 'GiveItem' || action.type === 'RemoveItem') {
-            base.itemId = action.itemId || action.target || null;
+            base.itemSlug = action.itemId || action.target
+              ? (itemSlugMap[action.itemId || action.target] || action.itemId || action.target)
+              : null;
           } else if (action.type === 'StartDialogue') {
-            base.dialogueId = action.dialogueId || action.target || null;
+            base.dialogueSlug = action.dialogueId || action.target
+              ? (dlgSlugMap[action.dialogueId || action.target] || action.dialogueId || action.target)
+              : null;
           } else {
             base.target = action.target || null;
             base.value = action.value || null;
@@ -132,7 +138,27 @@ export async function exportProject() {
         })
       })),
 
-      dialogues: []
+      dialogues: dialogues.map(dlg => {
+        const nodes = dialogueNodesMap[dlg.id] || [];
+        const charSlug = dlg.characterId ? (charSlugMap[dlg.characterId] || dlg.characterId) : null;
+        return {
+          slug: dlg.slug || dlg.id,
+          name: dlg.name,
+          characterSlug: charSlug,
+          description: dlg.description || "",
+          nodes: nodes.map(node => ({
+            id: node.id,
+            speakerId: node.speakerId === '__player__' ? '__player__' : (charSlugMap[node.speakerId] || node.speakerId),
+            text: node.text || "",
+            playerResponses: (node.playerResponses || []).map(resp => ({
+              text: resp.text || "",
+              conditionFlag: resp.conditionFlag || null,
+              actionOnSelect: resp.actionOnSelect || null,
+              nextNodeId: resp.nextNodeId || "__end__"
+            }))
+          }))
+        };
+      })
     };
 
     const jsonStr = JSON.stringify(exportData, null, 2);
@@ -142,7 +168,7 @@ export async function exportProject() {
     const body = `
       <div style="margin-bottom:12px;">
         <span class="text-xs text-muted">
-          &#128230; ${rooms.length} habitaciones, ${characters.length} personajes, ${items.length} items, ${flags.length} flags, ${events.length} triggers
+          &#128230; ${rooms.length} habitaciones, ${characters.length} personajes, ${items.length} items, ${flags.length} flags, ${events.length} triggers, ${dialogues.length} diálogos
         </span>
       </div>
       <div class="json-preview" id="json-preview-content">${highlighted}</div>

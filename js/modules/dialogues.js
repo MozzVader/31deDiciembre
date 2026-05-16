@@ -4,6 +4,16 @@
 import { getAll, create, update, remove, getOne, getNodes, createNode, updateNode, removeNode } from '../db.js';
 import { renderWorkspace, setBreadcrumbs, updateBadge, showToast, confirm, escapeHtml, createSelect, showModal, closeModal } from '../ui.js';
 
+/** Generate a slug from a name: 'Charla con Kiosquero' → 'dlg_charla_con_kiosquero' */
+function generateSlug(prefix, name) {
+  const base = name
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  return `${prefix}_${base}`;
+}
+
 export async function renderDialoguesList() {
   setBreadcrumbs([{ label: 'Diálogos' }]);
   const dialogues = await getAll('dialogues');
@@ -45,6 +55,7 @@ export async function renderDialoguesList() {
         </div>
         <div class="card-meta">
           <span class="card-badge">&#129489; ${escapeHtml(mainChar)}</span>
+          <span class="text-xs font-mono">${escapeHtml(dlg.slug || '')}</span>
         </div>
       </div>
     `;
@@ -378,9 +389,16 @@ export async function renderDialogueForm(dialogueId = null) {
     </div>
     <div class="form-container" style="max-width:560px;">
       <form id="dialogue-form">
-        <div class="form-group">
-          <label class="form-label">Nombre del Diálogo</label>
-          <input type="text" class="form-input" id="dlg-name" placeholder='Ej: "Charla con Kiosquero"' value="${escapeHtml(dialogue?.name || '')}" required>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Nombre del Diálogo</label>
+            <input type="text" class="form-input" id="dlg-name" placeholder='Ej: "Charla con Kiosquero"' value="${escapeHtml(dialogue?.name || '')}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Slug</label>
+            <input type="text" class="form-input font-mono" id="dlg-slug" placeholder="Ej: dlg_charla_kiosquero" value="${escapeHtml(dialogue?.slug || '')}">
+            <div class="form-hint">Código identificador. Se auto-genera del nombre.</div>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Personaje Principal</label>
@@ -399,15 +417,29 @@ export async function renderDialogueForm(dialogueId = null) {
     </div>
   `);
 
+  // Auto-generate slug from dialogue name
+  const dlgSlugInput = document.getElementById('dlg-slug');
+  const dlgNameInput = document.getElementById('dlg-name');
+  dlgNameInput.addEventListener('input', () => {
+    if (!dlgSlugInput.dataset.manual) {
+      dlgSlugInput.value = generateSlug('dlg', dlgNameInput.value);
+    }
+  });
+  dlgSlugInput.addEventListener('input', () => {
+    dlgSlugInput.dataset.manual = '1';
+  });
+
   document.getElementById('dialogue-form').onsubmit = async (e) => {
     e.preventDefault();
     const selects = document.querySelectorAll('#dialogue-form .form-select');
     const data = {
+      slug: document.getElementById('dlg-slug').value.trim(),
       name: document.getElementById('dlg-name').value.trim(),
       characterId: selects[0]?.value || null,
       description: document.getElementById('dlg-description').value.trim()
     };
 
+    if (!data.slug) data.slug = generateSlug('dlg', data.name);
     if (!data.name) {
       showToast('El nombre es obligatorio', 'error');
       return;
@@ -449,6 +481,10 @@ async function openDialogueInfoEditor(dialogueId, dialogue, characters) {
       <input type="text" class="form-input" id="edit-dlg-name" value="${escapeHtml(dialogue.name)}">
     </div>
     <div class="form-group">
+      <label class="form-label">Slug</label>
+      <input type="text" class="form-input font-mono" id="edit-dlg-slug" value="${escapeHtml(dialogue.slug || '')}">
+    </div>
+    <div class="form-group">
       <label class="form-label">Personaje Principal</label>
       ${createSelect(speakerOpts, dialogue.characterId || '', '— Seleccionar —')}
     </div>
@@ -465,6 +501,7 @@ async function openDialogueInfoEditor(dialogueId, dialogue, characters) {
 
   document.getElementById('edit-dlg-save').onclick = async () => {
     const name = document.getElementById('edit-dlg-name').value.trim();
+    const slug = document.getElementById('edit-dlg-slug').value.trim();
     const charSelect = document.querySelector('#modal .form-select');
     const description = document.getElementById('edit-dlg-desc').value.trim();
 
@@ -474,6 +511,7 @@ async function openDialogueInfoEditor(dialogueId, dialogue, characters) {
     }
 
     await update('dialogues', dialogueId, {
+      slug: slug || generateSlug('dlg', name),
       name,
       characterId: charSelect?.value || null,
       description

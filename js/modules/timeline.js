@@ -2,7 +2,7 @@
 // Módulo: Cronología (Timeline / Triggers)
 // ============================================
 import { getAll, create, update, remove, getOne } from '../db.js';
-import { renderWorkspace, setBreadcrumbs, updateBadge, showToast, confirm, escapeHtml, createSelect } from '../ui.js';
+import { renderWorkspace, setBreadcrumbs, updateBadge, showToast, confirm, escapeHtml, createSelect, showModal, closeModal } from '../ui.js';
 
 export async function renderTimelineList() {
   setBreadcrumbs([{ label: 'Cronología' }]);
@@ -334,22 +334,20 @@ window.fillActionFromDropdown = async function(btn) {
 
   if (!collection) return;
 
-  const { getAll: ga } = await import('../db.js');
-  const docs = await ga(collection);
+  const docs = await getAll(collection);
 
-  let options = docs.map(d => `<option value="${d.id}">${d.name || d.id} (${d.id.slice(0, 8)})</option>`).join('');
+  const options = docs.map(d => `<option value="${d.id}">${d.name || d.id} (${d.id.slice(0, 8)})</option>`).join('');
 
-  const modal = document.createElement('div');
-  modal.innerHTML = `
+  const bodyHtml = `
     <select class="form-select" id="autocomplete-select" style="margin-bottom:12px;">
       <option value="">— Seleccionar —</option>
       ${options}
     </select>
     <p class="text-xs text-muted">Seleccioná un elemento para autocompletar el campo Target.</p>
   `;
-  const selected = await new Promise(resolve => {
-    const { showModal, closeModal } = await import('../ui.js');
-    showModal('Autocompletar', modal.innerHTML, `
+
+  const selected = await new Promise((resolve) => {
+    showModal('Autocompletar', bodyHtml, `
       <button class="btn btn-ghost" id="ac-cancel">Cancelar</button>
       <button class="btn btn-primary" id="ac-ok">Aplicar</button>
     `);

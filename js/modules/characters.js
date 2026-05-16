@@ -4,6 +4,16 @@
 import { getAll, create, update, remove, getOne } from '../db.js';
 import { renderWorkspace, setBreadcrumbs, updateBadge, showToast, confirm, escapeHtml, createSelect } from '../ui.js';
 
+/** Generate a slug from a name: 'Diego' → 'char_diego' */
+function generateSlug(prefix, name) {
+  const base = name
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  return `${prefix}_${base}`;
+}
+
 export async function renderCharactersList() {
   setBreadcrumbs([{ label: 'Personajes' }]);
   const characters = await getAll('characters');
@@ -47,7 +57,7 @@ export async function renderCharactersList() {
         </div>
         <div class="card-meta">
           <span class="card-badge">${escapeHtml(startRoom)}</span>
-          <span>${char.id.slice(0, 8)}...</span>
+          <span class="text-xs font-mono">${escapeHtml(char.slug || '')}</span>
         </div>
         <div class="card-actions" onclick="event.stopPropagation()">
           <button class="btn btn-ghost btn-sm" onclick="window.location.hash='characters/${char.id}'">Editar</button>
@@ -98,16 +108,24 @@ export async function renderCharacterForm(charId = null) {
     </div>
     <div class="form-container">
       <form id="character-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Nombre</label>
+            <input type="text" class="form-input" id="char-name" placeholder="Ej: Don Rodolfo" value="${escapeHtml(character?.name || '')}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Slug</label>
+            <input type="text" class="form-input font-mono" id="char-slug" placeholder="Ej: char_diego" value="${escapeHtml(character?.slug || '')}">
+            <div class="form-hint">Se auto-genera del nombre.</div>
+          </div>
+        </div>
+
         <div class="form-group">
-          <label class="form-label">Nombre</label>
-          <input type="text" class="form-input" id="char-name" placeholder="Ej: Don Rodolfo" value="${escapeHtml(character?.name || '')}" required>
+          <label class="form-label">Rol / Tipo</label>
+          <input type="text" class="form-input" id="char-role" placeholder="Ej: Barman, NPC, Antagonista" value="${escapeHtml(character?.role || '')}">
         </div>
 
         <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Rol / Tipo</label>
-            <input type="text" class="form-input" id="char-role" placeholder="Ej: Barman, NPC, Antagonista" value="${escapeHtml(character?.role || '')}">
-          </div>
           <div class="form-group">
             <label class="form-label">Habitación Inicial</label>
             ${createSelect(rooms, character?.initialRoomId || '', '— Entra por trigger —')}
@@ -153,10 +171,23 @@ export async function renderCharacterForm(charId = null) {
     </div>
   `);
 
+  // Auto-generate slug from name
+  const slugInput = document.getElementById('char-slug');
+  const nameInput = document.getElementById('char-name');
+  nameInput.addEventListener('input', () => {
+    if (!slugInput.dataset.manual) {
+      slugInput.value = generateSlug('char', nameInput.value);
+    }
+  });
+  slugInput.addEventListener('input', () => {
+    slugInput.dataset.manual = '1';
+  });
+
   document.getElementById('character-form').onsubmit = async (e) => {
     e.preventDefault();
     const selects = document.querySelectorAll('#character-form .form-select');
     const data = {
+      slug: document.getElementById('char-slug').value.trim(),
       name: document.getElementById('char-name').value.trim(),
       role: document.getElementById('char-role').value.trim(),
       initialRoomId: selects[0]?.value || null,
@@ -165,6 +196,7 @@ export async function renderCharacterForm(charId = null) {
       avatarUrl: document.getElementById('char-avatar-url').value
     };
 
+    if (!data.slug) data.slug = generateSlug('char', data.name);
     if (!data.name) {
       showToast('El nombre es obligatorio', 'error');
       return;

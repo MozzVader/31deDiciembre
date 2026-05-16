@@ -4,6 +4,16 @@
 import { getAll, create, update, remove, getOne } from '../db.js';
 import { renderWorkspace, setBreadcrumbs, updateBadge, showToast, confirm, escapeHtml, createSelect } from '../ui.js';
 
+/** Generate a slug from a name: 'Bar Principal' → 'room_bar_principal' */
+function generateSlug(prefix, name) {
+  const base = name
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove accents
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  return `${prefix}_${base}`;
+}
+
 let rooms = [];
 
 export async function renderRoomsList() {
@@ -115,9 +125,16 @@ export async function renderRoomForm(roomId = null) {
     </div>
     <div class="form-container">
       <form id="room-form">
-        <div class="form-group">
-          <label class="form-label">Nombre</label>
-          <input type="text" class="form-input" id="room-name" placeholder="Ej: Bar Principal" value="${escapeHtml(room?.name || '')}" required>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Nombre</label>
+            <input type="text" class="form-input" id="room-name" placeholder="Ej: Bar Principal" value="${escapeHtml(room?.name || '')}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Slug</label>
+            <input type="text" class="form-input font-mono" id="room-slug" placeholder="Ej: room_bar" value="${escapeHtml(room?.slug || '')}">
+            <div class="form-hint">Se auto-genera del nombre. Podés editarlo manualmente.</div>
+          </div>
         </div>
 
         <div class="form-group">
@@ -164,17 +181,31 @@ export async function renderRoomForm(roomId = null) {
     </div>
   `);
 
+  // Auto-generate slug from name
+  const slugInput = document.getElementById('room-slug');
+  const nameInput = document.getElementById('room-name');
+  nameInput.addEventListener('input', () => {
+    if (!slugInput.dataset.manual) {
+      slugInput.value = generateSlug('room', nameInput.value);
+    }
+  });
+  slugInput.addEventListener('input', () => {
+    slugInput.dataset.manual = '1';
+  });
+
   // Form submission
   document.getElementById('room-form').onsubmit = async (e) => {
     e.preventDefault();
     const exits = collectExits();
     const data = {
+      slug: document.getElementById('room-slug').value.trim(),
       name: document.getElementById('room-name').value.trim(),
       description: document.getElementById('room-description').value.trim(),
       imageUrl: document.getElementById('room-image-url').value,
       exits
     };
 
+    if (!data.slug) data.slug = generateSlug('room', data.name);
     if (!data.name) {
       showToast('El nombre es obligatorio', 'error');
       return;

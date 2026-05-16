@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>31 de Diciembre — Adventure Design Toolbox</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <!-- Marked.js for Markdown rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <!-- Firebase SDK (Modular) -->
+  <script type="module">
+    // Firebase will be initialized in js/config.js and js/db.js
+  </script>
+</head>
+<body>
+  <div id="app">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-project">
+          <div class="sidebar-project-icon">&#127918;</div>
+          <div class="sidebar-project-info">
+            <div class="sidebar-project-name" id="project-name">31 de Diciembre</div>
+            <div class="sidebar-project-type">Adventure Designer</div>
+          </div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section-label">Diseño</div>
+        <div class="nav-item active" data-route="rooms">
+          <span class="nav-item-icon">&#128506;</span>
+          Habitaciones
+          <span class="nav-item-badge" id="badge-rooms">0</span>
+        </div>
+        <div class="nav-item" data-route="characters">
+          <span class="nav-item-icon">&#129489;&#8205;&#129489;&#8205;&#128101;</span>
+          Personajes
+          <span class="nav-item-badge" id="badge-characters">0</span>
+        </div>
+
+        <div class="nav-section-label">Mundo</div>
+        <div class="nav-item" data-route="items">
+          <span class="nav-item-icon">&#127890;</span>
+          Inventario & Flags
+          <span class="nav-item-badge" id="badge-items">0</span>
+        </div>
+
+        <div class="nav-section-label">Historia</div>
+        <div class="nav-item" data-route="timeline">
+          <span class="nav-item-icon">&#9201;&#65039;</span>
+          Cronología
+          <span class="nav-item-badge" id="badge-timeline">0</span>
+        </div>
+        <div class="nav-item" data-route="dialogues">
+          <span class="nav-item-icon">&#128172;</span>
+          Diálogos
+          <span class="nav-item-badge" id="badge-dialogues">0</span>
+        </div>
+
+        <div class="nav-section-label">Extras</div>
+        <div class="nav-item" data-route="notes">
+          <span class="nav-item-icon">&#128221;</span>
+          Notas Sueltas
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-footer-text">v1.0 — Adventure Design Toolbox</div>
+      </div>
+    </aside>
+
+    <!-- Main Area -->
+    <main class="main-area">
+      <!-- Top Bar -->
+      <header class="topbar">
+        <div class="breadcrumbs" id="breadcrumbs">
+          <span class="breadcrumb-item active">Habitaciones</span>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn btn-export" id="btn-export" title="Exportar diseño a JSON">
+            &#128230; Exportar JSON
+          </button>
+        </div>
+      </header>
+
+      <!-- Workspace -->
+      <div class="workspace" id="workspace">
+        <!-- Content rendered dynamically by modules -->
+        <div class="loading"><div class="spinner"></div></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Modal Overlay -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal" id="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-title"></h3>
+        <button class="modal-close" id="modal-close">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+      <div class="modal-footer" id="modal-footer"></div>
+    </div>
+  </div>
+
+  <!-- App Entry Point -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

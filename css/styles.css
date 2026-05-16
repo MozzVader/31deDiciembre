@@ -1097,6 +1097,71 @@ a:hover {
   filter: brightness(1.15);
 }
 
+/* ---------- Markdown Toolbar ---------- */
+.md-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 8px;
+  background: var(--bg-secondary, #1a1a2e);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: var(--radius-md, 8px) var(--radius-md, 8px) 0 0;
+  flex-wrap: wrap;
+}
+
+.md-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary, #a0a0b8);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.md-btn:hover {
+  background: var(--bg-card-hover, #252540);
+  color: var(--text-primary, #e0e0f0);
+  border-color: var(--border-light, #3a3a5c);
+}
+
+.md-btn:active {
+  transform: scale(0.95);
+}
+
+.md-btn b, .md-btn i, .md-btn s {
+  font-size: 13px;
+}
+
+.md-btn code {
+  font-size: 11px;
+  font-family: 'Fira Code', 'Cascadia Code', monospace;
+}
+
+.md-sep {
+  display: inline-block;
+  width: 1px;
+  height: 18px;
+  background: var(--border, #2a2a44);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+/* Adjust textarea border-radius when toolbar is present */
+.notes-editor .md-toolbar + textarea {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
 /* ---------- Modal ---------- */
 .modal-overlay {
   position: fixed;

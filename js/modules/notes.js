@@ -115,6 +115,26 @@ export async function renderNoteEditor(noteId = null) {
 
     <div class="notes-container">
       <div class="notes-editor">
+        <div class="md-toolbar" id="md-toolbar">
+          <button type="button" class="md-btn" data-action="h1" title="Título 1">H1</button>
+          <button type="button" class="md-btn" data-action="h2" title="Título 2">H2</button>
+          <button type="button" class="md-btn" data-action="h3" title="Título 3">H3</button>
+          <span class="md-sep"></span>
+          <button type="button" class="md-btn" data-action="bold" title="Negrita"><b>B</b></button>
+          <button type="button" class="md-btn" data-action="italic" title="Cursiva"><i>I</i></button>
+          <button type="button" class="md-btn" data-action="strike" title="Tachado"><s>S</s></button>
+          <span class="md-sep"></span>
+          <button type="button" class="md-btn" data-action="ul" title="Lista desordenada">&#8226; Lista</button>
+          <button type="button" class="md-btn" data-action="ol" title="Lista ordenada">1. Lista</button>
+          <button type="button" class="md-btn" data-action="check" title="Tarea">&#9745; Tarea</button>
+          <span class="md-sep"></span>
+          <button type="button" class="md-btn" data-action="code" title="Código inline"><code>&lt;/&gt;</code></button>
+          <button type="button" class="md-btn" data-action="codeblock" title="Bloque de código">&#123;&#125; Bloque</button>
+          <span class="md-sep"></span>
+          <button type="button" class="md-btn" data-action="link" title="Link">&#128279; Link</button>
+          <button type="button" class="md-btn" data-action="quote" title="Cita">&#8220; Cita</button>
+          <button type="button" class="md-btn" data-action="hr" title="Línea horizontal">&#8213; HR</button>
+        </div>
         <textarea id="note-editor" placeholder="# Escribí acá...
 
 ## Subtítulos
@@ -136,6 +156,106 @@ export async function renderNoteEditor(noteId = null) {
   // Live preview
   const editor = document.getElementById('note-editor');
   const preview = document.getElementById('note-preview');
+
+  // WYSIWYG Toolbar
+  const toolbar = document.getElementById('md-toolbar');
+  if (toolbar) {
+    toolbar.addEventListener('click', (e) => {
+      const btn = e.target.closest('.md-btn');
+      if (!btn) return;
+      e.preventDefault();
+      insertMarkdown(btn.dataset.action);
+      editor.focus();
+    });
+  }
+
+  function insertMarkdown(action) {
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+    const sel = editor.value.substring(start, end);
+    const before = editor.value.substring(0, start);
+    const after = editor.value.substring(end);
+    let insertion = '';
+    let cursorOffset = 0;
+
+    switch (action) {
+      case 'h1':
+        insertion = lineWrap(before, sel, after, '# '); break;
+      case 'h2':
+        insertion = lineWrap(before, sel, after, '## '); break;
+      case 'h3':
+        insertion = lineWrap(before, sel, after, '### '); break;
+      case 'bold':
+        insertion = wrapSelection(sel || 'negrita', '**', '**');
+        cursorOffset = sel ? insertion.length : 2; break;
+      case 'italic':
+        insertion = wrapSelection(sel || 'cursiva', '*', '*');
+        cursorOffset = sel ? insertion.length : 1; break;
+      case 'strike':
+        insertion = wrapSelection(sel || 'tachado', '~~', '~~');
+        cursorOffset = sel ? insertion.length : 2; break;
+      case 'ul':
+        insertion = lineWrap(before, sel, after, '- '); break;
+      case 'ol':
+        insertion = lineWrap(before, sel, after, '1. '); break;
+      case 'check':
+        insertion = lineWrap(before, sel, after, '- [ ] '); break;
+      case 'code':
+        insertion = wrapSelection(sel || 'codigo', '`', '`');
+        cursorOffset = sel ? insertion.length : 1; break;
+      case 'codeblock':
+        insertion = '\n```\n' + (sel || 'código') + '\n```\n';
+        cursorOffset = sel ? 4 : 4; break;
+      case 'link':
+        insertion = '[' + (sel || 'texto') + '](url)';
+        cursorOffset = sel ? insertion.length - 1 : 1; break;
+      case 'quote':
+        insertion = lineWrap(before, sel, after, '> '); break;
+      case 'hr':
+        insertion = '\n---\n';
+        cursorOffset = insertion.length; break;
+    }
+
+    editor.value = before + insertion + after;
+
+    // Restore selection
+    if (cursorOffset > 0 && sel) {
+      editor.selectionStart = start;
+      editor.selectionEnd = start + insertion.length;
+    } else if (!sel) {
+      // Select placeholder text so user can type over it
+      const placeholderStart = before.length + insertion.indexOf(sel || 'negrita' || 'cursiva' || 'codigo' || 'texto' || 'tachado');
+      // Find the placeholder in insertion
+      const phMatch = insertion.match(/(negrita|cursiva|tachado|codigo|texto)/);
+      if (phMatch) {
+        const phStart = before.length + insertion.indexOf(phMatch[1]);
+        editor.selectionStart = phStart;
+        editor.selectionEnd = phStart + phMatch[1].length;
+      } else {
+        editor.selectionStart = editor.selectionEnd = start + insertion.length;
+      }
+    } else {
+      editor.selectionStart = editor.selectionEnd = start + insertion.length;
+    }
+
+    // Trigger preview update
+    editor.dispatchEvent(new Event('input'));
+  }
+
+  function wrapSelection(text, prefix, suffix) {
+    return prefix + text + suffix;
+  }
+
+  function lineWrap(before, sel, after, prefix) {
+    // If at start of line or line is empty, just prepend
+    const lineStart = before.lastIndexOf('\n') + 1;
+    const currentLine = before.substring(lineStart);
+    if (currentLine.trim() === '' || lineStart === before.length) {
+      return prefix + (sel || 'texto');
+    }
+    // Otherwise add a newline first
+    return '\n' + prefix + (sel || 'texto');
+  }
 
   // Status badge
   const statusSelect = document.getElementById('note-status');

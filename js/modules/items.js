@@ -1,7 +1,7 @@
 // ============================================
 // Módulo: Inventario & Flags (Items & Conditions)
 // ============================================
-import { getAll, create, update, remove, getOne } from '../db.js';
+import { getAll, create, update, remove, getOne, getNodes } from '../db.js';
 import { renderWorkspace, setBreadcrumbs, updateBadge, showToast, confirm, escapeHtml, createSelect } from '../ui.js';
 
 /** Generate a slug from a name: 'Fernet' → 'item_fernet' */
@@ -104,6 +104,7 @@ async function renderItemsList(items) {
           <div class="card-meta" style="flex-wrap:wrap;">
             <span class="text-xs font-mono">${escapeHtml(item.slug || '')}</span>
             ${item.combinations?.length ? `<span class="card-badge">${item.combinations.length} combinación${item.combinations.length !== 1 ? 'es' : ''}</span>` : ''}
+            ${item.interactions?.length ? `<span class="card-badge" style="background:rgba(92,168,252,0.1);color:var(--info);"><i class="fa-solid fa-hand-pointer" style="font-size:10px;margin-right:3px;"></i>${item.interactions.length} interacción${item.interactions.length !== 1 ? 'es' : ''}</span>` : ''}
           </div>
         </div>
       `).join('')}
@@ -131,18 +132,21 @@ export async function renderItemForm(itemId = null) {
 
   const allItems = (await getAll('items')).filter(i => i.id !== itemId);
   const dialogues = await getAll('dialogues');
+  const flags = await getAll('flags');
   const combinations = item?.combinations || [];
+  const interactions = item?.interactions || [];
 
-  // Store on window for addCombo()
+  // Store on window for dynamic add functions
   window._availableComboItems = allItems;
   window._availableComboDialogues = dialogues;
+  window._itemFormData = { allItems, dialogues, flags };
 
   renderWorkspace(`
     <div class="detail-header">
       <button class="detail-back" onclick="window.location.hash='items'"><i class="fa-solid fa-arrow-left"></i> Volver</button>
       <h1 class="detail-title">${isNew ? 'Nuevo Item' : escapeHtml(item.name)}</h1>
     </div>
-    <div class="form-container">
+    <div class="form-container" style="max-width:960px;">
       <form id="item-form">
         <div class="form-row">
           <div class="form-group">
@@ -171,6 +175,22 @@ export async function renderItemForm(itemId = null) {
           <button type="button" class="dynamic-array-add mt-2" onclick="window.addCombo()">+ Agregar Combinación</button>
         </div>
 
+        <!-- ========== INTERACCIONES DEL ITEM ========== -->
+        <hr class="form-section-divider">
+        <div class="form-group">
+          <label class="form-label">
+            <i class="fa-solid fa-hand-pointer" style="color:var(--info);margin-right:6px;"></i>
+            Interacciones del Item
+          </label>
+          <div class="form-hint">Definí qué pasa cuando el jugador interactúa con este item en el inventario. Examinar (clic derecho) o Usar (clic izquierdo). Esto te permite crear "puertas lógicas": el jugador intenta usar el item y se entera de que le falta algo.</div>
+          <div id="item-interactions-container" class="dynamic-array">
+            ${interactions.map((int, i) => renderItemInteractionRow(int, i, { dialogues, flags, allItems })).join('')}
+          </div>
+          <button type="button" class="dynamic-array-add mt-2" onclick="window.addItemInteraction()">
+            + Añadir Interacción
+          </button>
+        </div>
+
         <div class="flex gap-2 mt-6">
           <button type="submit" class="btn btn-primary btn-lg">${isNew ? 'Crear Item' : 'Guardar Cambios'}</button>
           ${!isNew ? `<button type="button" class="btn btn-danger" id="btn-delete-item">Eliminar</button>` : ''}
@@ -191,13 +211,29 @@ export async function renderItemForm(itemId = null) {
     slugInput.dataset.manual = '1';
   });
 
+  // Load dialogue nodes for StartDialogue actions that already have a dialogue selected
+  document.querySelectorAll('#item-interactions-container .hs-action-card').forEach(async (actionCard) => {
+    const type = actionCard.querySelector('.item-action-type')?.value;
+    if (type === 'StartDialogue') {
+      const dlgSlug = actionCard.querySelector('.item-action-target')?.value;
+      const savedNode = actionCard.querySelector('.item-action-node')?.dataset.savedNode || '';
+      actionCard.querySelector('.item-action-target')?.addEventListener('change', function() {
+        window.loadItemDialogueNodes(actionCard, this.value);
+      });
+      if (dlgSlug) {
+        await window.loadItemDialogueNodes(actionCard, dlgSlug, savedNode);
+      }
+    }
+  });
+
   document.getElementById('item-form').onsubmit = async (e) => {
     e.preventDefault();
     const data = {
       slug: document.getElementById('item-slug').value.trim(),
       name: document.getElementById('item-name').value.trim(),
       description: document.getElementById('item-description').value.trim(),
-      combinations: collectCombos()
+      combinations: collectCombos(),
+      interactions: collectItemInteractions()
     };
 
     if (!data.slug) data.slug = generateSlug('item', data.name);
@@ -360,6 +396,284 @@ window.addCombo = async function() {
     </div>
   `;
   container.insertAdjacentHTML('beforeend', html);
+};
+
+// ============================================
+// Item Interactions — Render / Collect / Add
+// ============================================
+
+const ITEM_INTERACTION_TYPE_LABELS = {
+  examine: 'Examinar (Clic Derecho)',
+  use: 'Usar (Clic Izquierdo)'
+};
+
+const ITEM_ACTION_LABELS = {
+  StartDialogue: 'Iniciar Diálogo',
+  AddItem: 'Agregar Item al Inventario',
+  RemoveItem: 'Quitar Item del Inventario',
+  SetFlag: 'Cambiar Flag'
+};
+
+function renderItemInteractionRow(interaction, index, data) {
+  const type = interaction.type || 'examine';
+  const actions = (interaction.actions || [])
+    .map((act, i) => renderItemActionRow(act, i, data)).join('');
+
+  return `
+    <div class="interaction-card" data-item-interaction-index="${index}">
+      <div class="interaction-card-header">
+        <div class="interaction-card-header-left">
+          <i class="fa-solid fa-hand-pointer"></i>
+          <span class="interaction-title">Interacción #${index + 1} — ${ITEM_INTERACTION_TYPE_LABELS[type] || type}</span>
+        </div>
+        <button type="button" class="dynamic-array-remove" onclick="this.closest('.interaction-card').remove()">&times;</button>
+      </div>
+      <div class="interaction-card-body">
+        <div class="form-group">
+          <label class="form-label">Tipo de Interacción</label>
+          <select class="form-select item-interaction-type" onchange="window.handleItemInteractionTypeChange(this)">
+            <option value="examine" ${type === 'examine' ? 'selected' : ''}>Examinar (Clic Derecho)</option>
+            <option value="use" ${type === 'use' ? 'selected' : ''}>Usar (Clic Izquierdo)</option>
+          </select>
+          <div class="form-hint">Examinar: el jugador mira el item. Usar: el jugador intenta usar el item activamente.</div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Acciones (Resultados)</label>
+          <div class="dynamic-array item-interaction-actions-container">
+            ${actions}
+          </div>
+          <button type="button" class="dynamic-array-add mt-2" onclick="window.addItemAction(this.closest('.interaction-card'))">
+            + Añadir Acción
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderItemActionRow(action, index, data) {
+  const type = action.type || 'StartDialogue';
+
+  let targetVal = '';
+  let valueVal = '';
+  switch (type) {
+    case 'StartDialogue':
+      targetVal = action.dialogueSlug || '';
+      valueVal = action.nodeSlug || '';
+      break;
+    case 'AddItem':
+    case 'RemoveItem':
+      targetVal = action.itemSlug || '';
+      break;
+    case 'SetFlag':
+      targetVal = action.flagSlug || '';
+      valueVal = action.value !== undefined ? String(action.value) : '';
+      break;
+  }
+
+  const { targetHtml, valueHtml } = itemActionFieldsHtml(type, data, targetVal, valueVal);
+
+  return `
+    <div class="hs-action-card" data-item-action-index="${index}">
+      <div class="hs-action-card-header">
+        <span class="hs-action-title">${ITEM_ACTION_LABELS[type] || type}</span>
+        <button type="button" class="dynamic-array-remove" onclick="this.closest('.hs-action-card').remove()">&times;</button>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Tipo de Acción</label>
+          <select class="form-select item-action-type" onchange="window.handleItemActionTypeChange(this)">
+            <option value="StartDialogue" ${type === 'StartDialogue' ? 'selected' : ''}>Iniciar Diálogo</option>
+            <option value="AddItem" ${type === 'AddItem' ? 'selected' : ''}>Agregar Item</option>
+            <option value="RemoveItem" ${type === 'RemoveItem' ? 'selected' : ''}>Quitar Item</option>
+            <option value="SetFlag" ${type === 'SetFlag' ? 'selected' : ''}>Cambiar Flag</option>
+          </select>
+        </div>
+        <div class="form-group item-action-target-wrap">
+          ${targetHtml}
+        </div>
+        <div class="form-group item-action-value-wrap" ${!valueHtml ? 'style="display:none"' : ''}>
+          ${valueHtml}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function itemActionFieldsHtml(type, data, targetVal, valueVal) {
+  let targetHtml = '';
+  let valueHtml = '';
+
+  switch (type) {
+    case 'StartDialogue': {
+      const dlgOpts = data.dialogues.map(d => ({ id: d.slug || d.id, name: d.name }));
+      targetHtml = `<label class="form-label">Diálogo</label>
+        <select class="form-select item-action-target">
+          <option value="">— Seleccionar diálogo —</option>
+          ${dlgOpts.map(o => `<option value="${escapeHtml(o.id)}" ${o.id === targetVal ? 'selected' : ''}>${escapeHtml(o.name)}</option>`).join('')}
+        </select>
+        <div class="form-hint">Al seleccionar un diálogo se cargan sus nodos abajo.</div>`;
+      valueHtml = `<label class="form-label">Nodo Inicial (opcional)</label>
+        <select class="form-select item-action-node" data-saved-node="${escapeHtml(valueVal || '')}"><option value="">— (arranca desde el primer nodo) —</option></select>
+        <div class="form-hint">Dejá vacío para arrancar desde el primer nodo.</div>`;
+      break;
+    }
+    case 'AddItem':
+    case 'RemoveItem': {
+      const itemOpts = data.allItems.map(i => ({ id: i.slug || i.id, name: i.name }));
+      targetHtml = `<label class="form-label">Item</label>
+        <select class="form-select item-action-target">
+          <option value="">— Seleccionar item —</option>
+          ${itemOpts.map(o => `<option value="${escapeHtml(o.id)}" ${o.id === targetVal ? 'selected' : ''}>${escapeHtml(o.name)}</option>`).join('')}
+        </select>`;
+      break;
+    }
+    case 'SetFlag': {
+      const flagOpts = data.flags.map(f => ({ id: f.name, name: f.name }));
+      targetHtml = `<label class="form-label">Flag</label>
+        <select class="form-select item-action-target">
+          <option value="">— Seleccionar flag —</option>
+          ${flagOpts.map(o => `<option value="${escapeHtml(o.id)}" ${o.id === targetVal ? 'selected' : ''}>${escapeHtml(o.name)}</option>`).join('')}
+        </select>`;
+      valueHtml = `<label class="form-label">Valor</label>
+        <select class="form-select item-action-value">
+          <option value="true" ${valueVal === 'true' ? 'selected' : ''}>true</option>
+          <option value="false" ${valueVal === 'false' ? 'selected' : ''}>false</option>
+        </select>`;
+      break;
+    }
+  }
+
+  return { targetHtml, valueHtml };
+}
+
+function collectItemInteractions() {
+  const container = document.getElementById('item-interactions-container');
+  if (!container) return [];
+  const cards = container.querySelectorAll('.interaction-card');
+  const interactions = [];
+
+  cards.forEach(card => {
+    const type = card.querySelector('.item-interaction-type')?.value || 'examine';
+    const actions = collectItemActions(card);
+    interactions.push({ type, actions });
+  });
+
+  return interactions;
+}
+
+function collectItemActions(interactionCard) {
+  const container = interactionCard.querySelector('.item-interaction-actions-container');
+  if (!container) return [];
+  const cards = container.querySelectorAll('.hs-action-card');
+  const actions = [];
+
+  cards.forEach(card => {
+    const type = card.querySelector('.item-action-type')?.value || '';
+    const target = card.querySelector('.item-action-target')?.value?.trim() || '';
+    const value = card.querySelector('.item-action-value')?.value?.trim() || '';
+    if (!type) return;
+
+    const action = { type };
+
+    switch (type) {
+      case 'StartDialogue':
+        action.dialogueSlug = target || null;
+        action.nodeSlug = card.querySelector('.item-action-node')?.value?.trim() || null;
+        break;
+      case 'AddItem':
+      case 'RemoveItem':
+        action.itemSlug = target || null;
+        break;
+      case 'SetFlag':
+        action.flagSlug = target || null;
+        action.value = value === 'true' ? true : (value === 'false' ? false : value);
+        break;
+    }
+
+    actions.push(action);
+  });
+
+  return actions;
+}
+
+// ============================================
+// Window Functions — Item Interaction Dynamic Add
+// ============================================
+
+window.addItemInteraction = function() {
+  const container = document.getElementById('item-interactions-container');
+  if (!container) return;
+  const count = container.querySelectorAll('.interaction-card').length;
+  const data = window._itemFormData || {};
+  const html = renderItemInteractionRow({}, count, data);
+  container.insertAdjacentHTML('beforeend', html);
+};
+
+window.addItemAction = function(interactionCard) {
+  const container = interactionCard.querySelector('.item-interaction-actions-container');
+  if (!container) return;
+  const count = container.querySelectorAll('.hs-action-card').length;
+  const data = window._itemFormData || {};
+  const html = renderItemActionRow({}, count, data);
+  container.insertAdjacentHTML('beforeend', html);
+};
+
+window.handleItemInteractionTypeChange = function(select) {
+  const card = select.closest('.interaction-card');
+  const labelSpan = card.querySelector('.interaction-title');
+  if (labelSpan) {
+    const idx = card.dataset.itemInteractionIndex;
+    const num = parseInt(idx) + 1;
+    labelSpan.textContent = `Interacción #${num} — ${ITEM_INTERACTION_TYPE_LABELS[select.value] || select.value}`;
+  }
+};
+
+window.handleItemActionTypeChange = function(select) {
+  const card = select.closest('.hs-action-card');
+  const type = select.value;
+  const data = window._itemFormData || {};
+
+  const { targetHtml, valueHtml } = itemActionFieldsHtml(type, data, '', '');
+
+  card.querySelector('.item-action-target-wrap').innerHTML = targetHtml;
+  const valueWrap = card.querySelector('.item-action-value-wrap');
+  valueWrap.innerHTML = valueHtml;
+  valueWrap.style.display = valueHtml ? '' : 'none';
+
+  const titleSpan = card.querySelector('.hs-action-title');
+  if (titleSpan) titleSpan.textContent = ITEM_ACTION_LABELS[type] || type;
+
+  if (type === 'StartDialogue') {
+    const targetSelect = card.querySelector('.item-action-target');
+    if (targetSelect) {
+      targetSelect.onchange = () => window.loadItemDialogueNodes(card, targetSelect.value);
+    }
+  }
+};
+
+window.loadItemDialogueNodes = async function(actionCard, dialogueSlug, selectedNodeSlug = '') {
+  const nodeSelect = actionCard.querySelector('.item-action-node');
+  if (!nodeSelect) return;
+
+  nodeSelect.innerHTML = '<option value="">— (arranca desde el primer nodo) —</option>';
+  if (!dialogueSlug) return;
+
+  const data = window._itemFormData || {};
+  const dlg = data.dialogues.find(d => (d.slug || d.id) === dialogueSlug);
+  if (!dlg) return;
+
+  try {
+    const nodes = await getNodes(dlg.id);
+    const opts = nodes.map(n => ({
+      id: n.slug || n.id,
+      name: `${n.slug || n.id} — "${(n.text || '').slice(0, 40)}${(n.text || '').length > 40 ? '...' : ''}"`
+    }));
+    nodeSelect.innerHTML = createSelect(opts, selectedNodeSlug, '— (arranca desde el primer nodo) —');
+  } catch (err) {
+    console.error('Error loading dialogue nodes:', err);
+  }
 };
 
 // ============================================

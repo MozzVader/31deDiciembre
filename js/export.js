@@ -115,6 +115,23 @@ export async function exportProject() {
           resultDialogueSlug: c.resultDialogueSlug || null
         })).filter(c => c.withItemSlug);
 
+        const interactions = (item.interactions || []).map(int => ({
+          type: int.type || 'examine',
+          actions: (int.actions || []).map(act => {
+            const a = { type: act.type };
+            if (act.type === 'StartDialogue') {
+              a.dialogueSlug = act.dialogueSlug || null;
+              if (act.nodeSlug) a.nodeSlug = act.nodeSlug;
+            } else if (act.type === 'AddItem' || act.type === 'RemoveItem') {
+              a.itemSlug = act.itemSlug || null;
+            } else if (act.type === 'SetFlag') {
+              a.flagSlug = act.flagSlug || null;
+              a.value = act.value ?? true;
+            }
+            return a;
+          })
+        }));
+
         const exported = {
           slug: item.slug || item.id,
           name: item.name,
@@ -123,6 +140,9 @@ export async function exportProject() {
 
         if (combos.length > 0) {
           exported.combinations = combos;
+        }
+        if (interactions.length > 0) {
+          exported.interactions = interactions;
         }
 
         return exported;

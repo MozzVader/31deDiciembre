@@ -30,7 +30,23 @@ export async function renderRoomsList() {
     return;
   }
 
-  const cards = rooms.map(room => `
+  // Build a map of roomId → name for resolving exit targets
+  const roomNameMap = {};
+  rooms.forEach(r => { roomNameMap[r.id] = r.name; });
+
+  const cards = rooms.map(room => {
+    // Resolve exit target names
+    const exitNames = (room.exits || [])
+      .map(exit => {
+        const dir = exit.direction ? `${exit.direction} → ` : '→ ';
+        const dest = roomNameMap[exit.targetRoomId] || 'Destino eliminado';
+        return `${dir}${dest}`;
+      });
+    const exitsHtml = exitNames.length
+      ? exitNames.map(n => `<span class="card-badge">${escapeHtml(n)}</span>`).join('')
+      : '<span style="color:var(--text-muted)">Sin salidas</span>';
+
+    return `
     <div class="card" onclick="window.location.hash='rooms/${room.id}'">
       <div class="card-thumb">
         ${room.imageUrl ? `<img src="${room.imageUrl}" alt="${escapeHtml(room.name)}">` : '&#127968;'}
@@ -38,15 +54,15 @@ export async function renderRoomsList() {
       <div class="card-title">${escapeHtml(room.name)}</div>
       <div class="card-description">${escapeHtml(room.description || 'Sin descripción')}</div>
       <div class="card-meta">
-        ${room.exits?.length ? `<span class="card-badge">${room.exits.length} salida${room.exits.length !== 1 ? 's' : ''}</span>` : ''}
-        <span>${room.id.slice(0, 8)}...</span>
+        ${exitsHtml}
       </div>
       <div class="card-actions" onclick="event.stopPropagation()">
         <button class="btn btn-ghost btn-sm" onclick="window.location.hash='rooms/${room.id}'">Editar</button>
         <button class="btn btn-danger btn-sm" onclick="window.deleteRoom('${room.id}', '${escapeHtml(room.name)}')">Eliminar</button>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 
   renderWorkspace(`
     <div class="workspace-header">
@@ -193,10 +209,17 @@ export async function renderRoomForm(roomId = null) {
 }
 
 function renderExitRow(exit = {}, rooms = [], flags = [], index = 0) {
+  // Resolve target room name for the title
+  const targetRoom = rooms.find(r => r.id === exit.targetRoomId);
+  const targetName = targetRoom ? targetRoom.name : '';
+  const titleText = targetName
+    ? `Salida #${index + 1} → ${targetName}`
+    : `Salida #${index + 1}`;
+
   return `
     <div class="dynamic-array-item" data-exit-index="${index}">
       <div class="dynamic-array-item-header">
-        <span class="dynamic-array-item-title">Salida #${index + 1}</span>
+        <span class="dynamic-array-item-title">${escapeHtml(titleText)}</span>
         <button type="button" class="dynamic-array-remove" onclick="this.closest('.dynamic-array-item').remove()">&times;</button>
       </div>
       <div class="form-row">

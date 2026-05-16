@@ -257,17 +257,14 @@ export async function renderRoomForm(roomId = null) {
     const type = actionCard.querySelector('.hs-action-type')?.value;
     if (type === 'StartDialogue') {
       const dlgSlug = actionCard.querySelector('.hs-action-target')?.value;
+      const savedNode = actionCard.querySelector('.hs-action-node')?.dataset.savedNode || '';
+      // Attach onchange listener for future changes
+      actionCard.querySelector('.hs-action-target')?.addEventListener('change', function() {
+        window.loadHsDialogueNodes(actionCard, this.value);
+      });
+      // Load existing nodes (with saved selection)
       if (dlgSlug) {
-        // Attach onchange listener for future changes
-        actionCard.querySelector('.hs-action-target').onchange = () =>
-          window.loadHsDialogueNodes(actionCard, actionCard.querySelector('.hs-action-target').value);
-        // Load existing nodes
-        await window.loadHsDialogueNodes(actionCard, dlgSlug);
-      } else {
-        // Attach onchange listener even without a pre-selected dialogue
-        actionCard.querySelector('.hs-action-target')?.addEventListener('change', function() {
-          window.loadHsDialogueNodes(actionCard, this.value);
-        });
+        await window.loadHsDialogueNodes(actionCard, dlgSlug, savedNode);
       }
     }
   });
@@ -522,7 +519,7 @@ function hsActionFieldsHtml(type, data, targetVal, valueVal) {
         ${sel(dlgOpts, targetVal, '— Seleccionar diálogo —', 'hs-action-target')}
         <div class="form-hint">Al seleccionar un diálogo se cargan sus nodos abajo.</div>`;
       valueHtml = `<label class="form-label">Nodo Inicial (opcional)</label>
-        ${sel([], valueVal, '— (arranca desde el primer nodo) —', 'hs-action-node')}
+        <select class="form-select hs-action-node" data-saved-node="${escapeHtml(valueVal || '')}"><option value="">— (arranca desde el primer nodo) —</option></select>
         <div class="form-hint">Dejá vacío para arrancar desde el primer nodo.</div>`;
       break;
     }
@@ -810,7 +807,7 @@ window.handleHsActionTypeChange = function(select) {
 // Load Dialogue Nodes (for StartDialogue in hotspots)
 // ============================================
 
-window.loadHsDialogueNodes = async function(actionCard, dialogueSlug) {
+window.loadHsDialogueNodes = async function(actionCard, dialogueSlug, selectedNodeSlug = '') {
   const nodeSelect = actionCard.querySelector('.hs-action-node');
   if (!nodeSelect) return;
 
@@ -829,7 +826,7 @@ window.loadHsDialogueNodes = async function(actionCard, dialogueSlug) {
       id: n.slug || n.id,
       name: `${n.slug || n.id} — "${(n.text || '').slice(0, 40)}${(n.text || '').length > 40 ? '...' : ''}"`
     }));
-    nodeSelect.innerHTML = createSelect(opts, '', '— (arranca desde el primer nodo) —');
+    nodeSelect.innerHTML = createSelect(opts, selectedNodeSlug, '— (arranca desde el primer nodo) —');
   } catch (err) {
     console.error('Error loading dialogue nodes:', err);
   }

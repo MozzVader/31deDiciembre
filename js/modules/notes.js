@@ -6,6 +6,22 @@ import { renderWorkspace, setBreadcrumbs, showToast, confirm, escapeHtml } from 
 
 let autoSaveTimer = null;
 
+const STATUS_CYCLE = ['nueva', 'en_progreso', 'completada'];
+const STATUS_LABELS = {
+  nueva: '\u{1F4C4} Nueva',
+  en_progreso: '\u{1F527} En progreso',
+  completada: '\u{2705} Completada'
+};
+
+// Cambiar estado de una nota desde la card (click en badge)
+window.cycleNoteStatus = async function(noteId, currentStatus) {
+  const idx = STATUS_CYCLE.indexOf(currentStatus);
+  const nextStatus = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
+  await update('notes', noteId, { status: nextStatus });
+  showToast(`${STATUS_LABELS[nextStatus]}`, 'success');
+  renderNotesList(); // re-render para ver el cambio
+};
+
 export async function renderNotesList() {
   setBreadcrumbs([{ label: 'Notas Sueltas' }]);
   const notes = await getAll('notes');
@@ -32,13 +48,19 @@ export async function renderNotesList() {
   const cards = notes.map(note => {
     const preview = (note.content || '').slice(0, 120).replace(/[#*_`]/g, '');
     const date = note.updatedAt ? new Date(note.updatedAt.seconds * 1000).toLocaleDateString('es-AR') : '';
+    const status = note.status || 'nueva';
     return `
       <div class="card" onclick="window.location.hash='notes/${note.id}'">
-        <div class="card-title">${escapeHtml(note.title || 'Sin título')}</div>
-        <div class="card-description">${escapeHtml(preview)}</div>
-        <div class="card-meta">
+        <div class="card-meta" style="margin-top:0;margin-bottom:8px;">
+          <span class="card-badge note-status-${status} note-status-badge"
+                onclick="event.stopPropagation(); cycleNoteStatus('${note.id}', '${status}')"
+                title="Click para cambiar estado">
+            ${STATUS_LABELS[status] || STATUS_LABELS.nueva}
+          </span>
           <span>${date}</span>
         </div>
+        <div class="card-title">${escapeHtml(note.title || 'Sin título')}</div>
+        <div class="card-description">${escapeHtml(preview)}</div>
       </div>
     `;
   }).join('');
@@ -56,7 +78,8 @@ export async function renderNotesList() {
 }
 
 export async function renderNoteEditor(noteId = null) {
-  const isNew = !noteId;
+  let isNew = !noteId;
+  let currentNoteId = noteId; // mutable — se actualiza tras el primer create
   setBreadcrumbs([
     { label: 'Notas Sueltas', route: 'notes' },
     { label: isNew ? 'Nueva Nota' : 'Editar' }
@@ -64,7 +87,7 @@ export async function renderNoteEditor(noteId = null) {
 
   let note = null;
   if (!isNew) {
-    note = await getOne('notes', noteId);
+    note = await getOne('notes', currentNoteId);
     if (!note) {
       showToast('Nota no encontrada', 'error');
       window.location.hash = 'notes';
@@ -74,12 +97,16 @@ export async function renderNoteEditor(noteId = null) {
 
   const content = note?.content || '';
   const title = note?.title || '';
+  const status = note?.status || 'nueva';
 
   renderWorkspace(`
     <div class="detail-header">
       <button class="detail-back" onclick="window.location.hash='notes'">&#9664; Volver</button>
       <input type="text" class="form-input" id="note-title" placeholder="Título de la nota..." value="${escapeHtml(title)}" style="font-size:18px;font-weight:700;background:transparent;border:1px solid transparent;padding:4px 8px;max-width:400px;">
       <div class="detail-actions">
+        <select id="note-status" class="form-select" style="font-size:12px;padding:4px 8px;border-radius:8px;">
+          ${STATUS_CYCLE.map(s => `<option value="${s}" ${status === s ? 'selected' : ''}>${STATUS_LABELS[s]}</option>`).join('')}
+        </select>
         <span class="text-xs text-muted" id="note-saved-status">Sin guardar</span>
         <button class="btn btn-ghost btn-sm" id="btn-save-note">Guardar</button>
         ${!isNew ? `<button class="btn btn-danger btn-sm" id="btn-delete-note">Eliminar</button>` : ''}
@@ -110,6 +137,18 @@ export async function renderNoteEditor(noteId = null) {
   const editor = document.getElementById('note-editor');
   const preview = document.getElementById('note-preview');
 
+  // Status badge
+  const statusSelect = document.getElementById('note-status');
+  if (statusSelect) {
+    statusSelect.onchange = async () => {
+      // Solo actualizar el status en Firestore sin esperar auto-save
+      if (currentNoteId) {
+        await update('notes', currentNoteId, { status: statusSelect.value });
+        showToast('Estado actualizado', 'success');
+      }
+    };
+  }
+
   editor.oninput = () => {
     preview.innerHTML = renderMarkdown(editor.value);
     document.getElementById('note-saved-status').textContent = 'Sin guardar...';
@@ -117,40 +156,43 @@ export async function renderNoteEditor(noteId = null) {
 
     // Auto-save debounce
     clearTimeout(autoSaveTimer);
-    autoSaveTimer = setTimeout(() => saveNote(noteId), 2000);
+    autoSaveTimer = setTimeout(() => saveNote(), 2000);
   };
 
   // Save button
-  document.getElementById('btn-save-note').onclick = () => saveNote(noteId);
+  document.getElementById('btn-save-note').onclick = () => saveNote();
 
   // Delete
   if (!isNew) {
     document.getElementById('btn-delete-note').onclick = async () => {
       const ok = await confirm('¿Eliminás esta nota?');
       if (ok) {
-        await remove('notes', noteId);
+        await remove('notes', currentNoteId);
         showToast('Nota eliminada', 'success');
         window.location.hash = 'notes';
       }
     };
   }
 
-  async function saveNote(currentId) {
+  async function saveNote() {
     const data = {
       title: document.getElementById('note-title').value.trim() || 'Sin título',
-      content: editor.value
+      content: editor.value,
+      status: document.getElementById('note-status')?.value || 'nueva'
     };
 
     try {
-      if (isNew || !currentId) {
+      if (isNew || !currentNoteId) {
         const id = await create('notes', data);
+        currentNoteId = id; // <— clave: actualizar la referencia
+        isNew = false;       // <— ya no es nueva
         showToast('Nota creada', 'success');
         // Update URL without re-rendering
         window.history.replaceState(null, '', '#notes/' + id);
         document.getElementById('note-saved-status').textContent = 'Guardado';
         document.getElementById('note-saved-status').style.color = 'var(--success)';
       } else {
-        await update('notes', currentId, data);
+        await update('notes', currentNoteId, data);
         document.getElementById('note-saved-status').textContent = 'Guardado';
         document.getElementById('note-saved-status').style.color = 'var(--success)';
       }

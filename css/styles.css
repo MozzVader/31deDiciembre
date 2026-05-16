@@ -1162,6 +1162,25 @@ a:hover {
   border-top-right-radius: 0;
 }
 
+/* Code block language label */
+.code-block-lang {
+  display: inline-block;
+  padding: 2px 10px;
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  border-radius: 4px 4px 0 0;
+  margin-bottom: -1px;
+  position: relative;
+  top: 1px;
+}
+
+.notes-preview pre:has(+ .code-block-lang),
+.notes-preview .code-block-lang + pre {
+  border-top-left-radius: 0;
+}
+
 /* ---------- Modal ---------- */
 .modal-overlay {
   position: fixed;

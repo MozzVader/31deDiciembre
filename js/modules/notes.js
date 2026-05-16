@@ -108,6 +108,7 @@ export async function renderNoteEditor(noteId = null) {
           ${STATUS_CYCLE.map(s => `<option value="${s}" ${status === s ? 'selected' : ''}>${STATUS_LABELS[s]}</option>`).join('')}
         </select>
         <span class="text-xs text-muted" id="note-saved-status">Sin guardar</span>
+        <button class="btn btn-ghost btn-sm" id="btn-export-md" title="Descargar .md">&#128196; Export MD</button>
         <button class="btn btn-ghost btn-sm" id="btn-save-note">Guardar</button>
         ${!isNew ? `<button class="btn btn-danger btn-sm" id="btn-delete-note">Eliminar</button>` : ''}
       </div>
@@ -292,6 +293,24 @@ export async function renderNoteEditor(noteId = null) {
     autoSaveTimer = setTimeout(() => saveNote(), 2000);
   };
 
+  // Export MD button
+  document.getElementById('btn-export-md').onclick = () => {
+    const noteTitle = document.getElementById('note-title').value.trim() || 'sin-titulo';
+    const filename = noteTitle
+      .toLowerCase()
+      .replace(/[^a-z0-9áéíóúñ\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-') + '.md';
+    const blob = new Blob([editor.value], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast(`Descargado: ${filename}`, 'success');
+  };
+
   // Save button
   document.getElementById('btn-save-note').onclick = () => saveNote();
 
@@ -342,26 +361,42 @@ export async function renderNoteEditor(noteId = null) {
 function renderMarkdown(text) {
   if (!text) return '<p style="color:var(--text-muted);font-style:italic;">Escribí algo en el editor de la izquierda...</p>';
 
+  let html;
+
   // Use marked.js if available
   if (typeof marked !== 'undefined') {
     try {
-      return marked.parse(text);
+      html = marked.parse(text);
     } catch (e) {
-      // Fallback to basic rendering
+      html = null;
     }
   }
 
   // Basic markdown fallback
-  let html = escapeHtml(text);
-  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-  html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
-  html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-  html = html.replace(/`(.+?)`/g, '<code>$1</code>');
-  html = html.replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
-  html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
-  html = html.replace(/\n\n/g, '</p><p>');
-  html = `<p>${html}</p>`;
+  if (!html) {
+    html = escapeHtml(text);
+    // Fenced code blocks: ```lang\ncode\n```
+    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
+      const label = lang ? `<div class="code-block-lang">${lang}</div>` : '';
+      return `${label}<pre><code>${code.trim()}</code></pre>`;
+    });
+    html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+    html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+    html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    html = html.replace(/`(.+?)`/g, '<code>$1</code>');
+    html = html.replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
+    html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+    html = html.replace(/\n\n/g, '</p><p>');
+    html = `<p>${html}</p>`;
+  }
+
+  // Post-process: add language labels to code blocks rendered by marked.js
+  if (html && typeof marked !== 'undefined') {
+    html = html.replace(/<pre><code class="language-(\w+)">([\s\S]*?)<\/code><\/pre>/g,
+      '<div class="code-block-lang">$1</div><pre><code class="language-$1">$2</code></pre>');
+  }
+
   return html;
 }

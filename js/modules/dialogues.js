@@ -183,12 +183,13 @@ function renderNodeTree(node, nodeMap, characters, flags) {
   const children = (node.children || []);
   const childrenHtml = children.map(child => renderNodeTree(child, nodeMap, characters, flags)).join('');
 
+  const nodeSlug = node.slug || '';
   return `
     <div class="dialogue-node" data-node-id="${node.id}">
       <div class="dialogue-node-card" onclick="window.openNodeEditor('${node.id.split('/')[0]}', '${node.id}')" style="cursor:pointer;">
         <div class="dialogue-node-header">
           <span class="dialogue-node-speaker">&#128483; ${escapeHtml(speakerName)}</span>
-          <span class="dialogue-node-id">${node.id.split('/').pop()}</span>
+          <span class="dialogue-node-id">${escapeHtml(nodeSlug || node.id.split('/').pop())}</span>
         </div>
         <div class="dialogue-node-text">"${escapeHtml(node.text || '')}"</div>
         ${node.responses?.length ? `
@@ -211,28 +212,45 @@ window.openNodeEditor = async function(dialogueId, nodeId) {
   const characters = await getAll('characters');
   const flags = await getAll('flags');
 
+  // Fetch ALL nodes in this dialogue (for the next-node dropdown)
+  const allNodes = await getNodes(dialogueId);
+
   let node = null;
   if (nodeId) {
-    const allNodes = await getNodes(dialogueId);
     node = allNodes.find(n => n.id === nodeId);
   }
 
   const isNew = !node;
   const responses = node?.playerResponses || [];
-  const parentOptions = nodeId
-    ? [{ id: '', name: '(Nodo raíz)' }]
-    : [{ id: '', name: '(Nodo raíz)' }];
 
-  if (isNew && nodeId === null) {
-    // Root node
-  }
+  // Build node options for the next-node dropdown
+  const nodeOptions = [
+    { id: '__end__', name: '__end__ (Fin del diálogo)' },
+    ...allNodes
+      .filter(n => n.id !== nodeId) // exclude current node
+      .map(n => ({
+        id: n.slug || n.id,
+        name: `${n.slug || n.id} — "${(n.text || '').slice(0, 30)}${(n.text || '').length > 30 ? '...' : ''}"`
+      }))
+  ];
+
+  // Cache for addResponseEditor()
+  window._currentDialogueId = dialogueId;
+  window._availableNodeOptions = nodeOptions;
 
   const speakerOpts = [
     { id: '__player__', name: 'Jugador' },
     ...characters
   ];
 
-  const responsesHtml = responses.map((resp, i) => `
+  const responsesHtml = responses.map((resp, i) => {
+    // Resolve nextNodeId: could be old Firestore ID, slug, or __end__
+    let nextVal = resp.nextNodeSlug || resp.nextNodeId || '__end__';
+    // If it's a Firestore ID, try to resolve to slug
+    const matchNode = allNodes.find(n => n.id === nextVal);
+    if (matchNode) nextVal = matchNode.slug || matchNode.id;
+
+    return `
     <div class="dynamic-array-item" data-response-index="${i}">
       <div class="dynamic-array-item-header">
         <span class="dynamic-array-item-title">Respuesta #${i + 1}</span>
@@ -254,16 +272,23 @@ window.openNodeEditor = async function(dialogueId, nodeId) {
       </div>
       <div class="form-group" style="margin-bottom:0">
         <label class="form-label">Próximo Nodo</label>
-        <input type="text" class="form-input response-next" placeholder="ID del próximo nodo, o '__end__' para terminar" value="${escapeHtml(resp.nextNodeId || '')}">
-        <div class="form-hint">Escribí el ID de otro nodo para conectar, o "__end__" para finalizar el diálogo.</div>
+        ${createSelect(nodeOptions, nextVal, '— Fin del diálogo —')}
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 
   const body = `
-    <div class="form-group">
-      <label class="form-label">Quién habla</label>
-      ${createSelect(speakerOpts, node?.speakerId || '', '— Seleccionar —')}
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Slug del Nodo</label>
+        <input type="text" class="form-input font-mono" id="node-editor-slug" placeholder="Ej: node_bienvenida" value="${escapeHtml(node?.slug || '')}">
+        <div class="form-hint">Código identificador. Se auto-genera del texto.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Quién habla</label>
+        ${createSelect(speakerOpts, node?.speakerId || '', '— Seleccionar —')}
+      </div>
     </div>
     <div class="form-group">
       <label class="form-label">Texto</label>
@@ -284,33 +309,57 @@ window.openNodeEditor = async function(dialogueId, nodeId) {
     <button class="btn btn-primary" id="node-editor-save">${isNew ? 'Crear' : 'Guardar'}</button>
   `);
 
+  // Auto-generate slug from text
+  const nodeSlugInput = document.getElementById('node-editor-slug');
+  const nodeTextInput = document.getElementById('node-editor-text');
+  if (!isNew && nodeSlugInput.value) {
+    nodeSlugInput.dataset.manual = '1'; // don't overwrite existing slug
+  }
+  nodeTextInput.addEventListener('input', () => {
+    if (!nodeSlugInput.dataset.manual) {
+      // Use first ~5 words of text for slug
+      const words = nodeTextInput.value.trim().split(/\s+/).slice(0, 5).join(' ');
+      nodeSlugInput.value = generateSlug('node', words);
+    }
+  });
+  nodeSlugInput.addEventListener('input', () => {
+    nodeSlugInput.dataset.manual = '1';
+  });
+
   document.getElementById('node-editor-save').onclick = async () => {
     const speakerSelect = document.querySelector('#modal .form-select');
     const text = document.getElementById('node-editor-text').value.trim();
+    const slug = document.getElementById('node-editor-slug').value.trim();
     const speakerId = speakerSelect?.value || '';
+
+    if (!slug) {
+      showToast('El slug del nodo es obligatorio', 'error');
+      return;
+    }
 
     // Collect responses
     const respContainer = document.getElementById('responses-editor-container');
     const respItems = respContainer.querySelectorAll('.dynamic-array-item');
     const playerResponses = [];
     respItems.forEach(item => {
-      const text = item.querySelector('.response-text')?.value.trim();
-      if (text) {
+      const respText = item.querySelector('.response-text')?.value.trim();
+      if (respText) {
         const selects = item.querySelectorAll('.form-select');
+        // selects[0] = condition flag, selects[1] = next node
         playerResponses.push({
-          text,
+          text: respText,
           conditionFlag: selects[0]?.value || null,
           actionOnSelect: item.querySelector('.response-action')?.value.trim() || null,
-          nextNodeId: item.querySelector('.response-next')?.value.trim() || '__end__'
+          nextNodeSlug: selects[1]?.value || '__end__'
         });
       }
     });
 
-    const data = { speakerId, text, playerResponses };
+    const data = { slug, speakerId, text, playerResponses };
 
     try {
       if (isNew) {
-        const newNodeId = await createNode(dialogueId, data);
+        await createNode(dialogueId, data);
         showToast('Nodo creado', 'success');
       } else {
         await updateNode(dialogueId, nodeId, data);
@@ -325,11 +374,37 @@ window.openNodeEditor = async function(dialogueId, nodeId) {
   };
 };
 
-window.addResponseEditor = function() {
+window.addResponseEditor = async function() {
   const container = document.getElementById('responses-editor-container');
+  if (!container) return;
   const count = container.querySelectorAll('.dynamic-array-item').length;
+
+  // Get flag options from existing selects or fetch
+  let flagSelectHtml = '';
   const lastItem = container.querySelector('.dynamic-array-item:last-child');
-  const flagSelectHtml = lastItem?.querySelector('.form-select')?.innerHTML || '';
+  if (lastItem?.querySelector('.form-select')) {
+    flagSelectHtml = lastItem.querySelectorAll('.form-select')[0]?.innerHTML || '';
+  }
+  if (!flagSelectHtml) {
+    const flags = await getAll('flags');
+    flagSelectHtml = `<option value="">— Sin condición —</option>` +
+      flags.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
+  }
+
+  // Get node options (cached or fetch fresh)
+  let nodeOpts = window._availableNodeOptions || [];
+  if (nodeOpts.length === 0 && window._currentDialogueId) {
+    const nodes = await getNodes(window._currentDialogueId);
+    nodeOpts = [
+      { id: '__end__', name: '__end__ (Fin del diálogo)' },
+      ...nodes.map(n => ({
+        id: n.slug || n.id,
+        name: `${n.slug || n.id} — "${(n.text || '').slice(0, 30)}${(n.text || '').length > 30 ? '...' : ''}"`
+      }))
+    ];
+    window._availableNodeOptions = nodeOpts;
+  }
+  const nodeSelectHtml = nodeOpts.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
 
   container.insertAdjacentHTML('beforeend', `
     <div class="dynamic-array-item" data-response-index="${count}">
@@ -353,7 +428,7 @@ window.addResponseEditor = function() {
       </div>
       <div class="form-group" style="margin-bottom:0">
         <label class="form-label">Próximo Nodo</label>
-        <input type="text" class="form-input response-next" placeholder="ID del próximo nodo, o '__end__'">
+        <select class="form-select">${nodeSelectHtml}</select>
       </div>
     </div>
   `);

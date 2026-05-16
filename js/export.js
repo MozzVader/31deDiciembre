@@ -141,20 +141,25 @@ export async function exportProject() {
       dialogues: dialogues.map(dlg => {
         const nodes = dialogueNodesMap[dlg.id] || [];
         const charSlug = dlg.characterId ? (charSlugMap[dlg.characterId] || dlg.characterId) : null;
+
+        // Build nodeSlugMap: Firestore node ID → slug (for resolving nextNodeSlug)
+        const nodeSlugMap = {};
+        nodes.forEach(n => { nodeSlugMap[n.id] = n.slug || n.id; });
+
         return {
           slug: dlg.slug || dlg.id,
           name: dlg.name,
           characterSlug: charSlug,
           description: dlg.description || "",
           nodes: nodes.map(node => ({
-            id: node.id,
+            slug: node.slug || node.id,
             speakerId: node.speakerId === '__player__' ? '__player__' : (charSlugMap[node.speakerId] || node.speakerId),
             text: node.text || "",
             playerResponses: (node.playerResponses || []).map(resp => ({
               text: resp.text || "",
               conditionFlag: resp.conditionFlag || null,
               actionOnSelect: resp.actionOnSelect || null,
-              nextNodeId: resp.nextNodeId || "__end__"
+              nextNodeSlug: nodeSlugMap[resp.nextNodeId] || resp.nextNodeSlug || resp.nextNodeId || "__end__"
             }))
           }))
         };

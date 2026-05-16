@@ -130,6 +130,7 @@ export async function exportProject() {
             base.dialogueSlug = action.dialogueId || action.target
               ? (dlgSlugMap[action.dialogueId || action.target] || action.dialogueId || action.target)
               : null;
+            base.nodeSlug = action.nodeSlug || null;
           } else {
             base.target = action.target || null;
             base.value = action.value || null;

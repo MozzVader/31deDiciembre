@@ -1,16 +1,14 @@
 // ============================================
 // Módulo: Habitaciones (Rooms)
 // ============================================
-import { getAll, create, update, remove, getOne, generateId } from '../db.js';
+import { getAll, create, update, remove, getOne } from '../db.js';
 import { renderWorkspace, setBreadcrumbs, updateBadge, showToast, confirm, escapeHtml, createSelect } from '../ui.js';
 
 let rooms = [];
-let characters = [];
 
 export async function renderRoomsList() {
   setBreadcrumbs([{ label: 'Habitaciones' }]);
   rooms = await getAll('rooms');
-
   updateBadge('rooms', rooms.length);
 
   if (rooms.length === 0) {
@@ -40,8 +38,12 @@ export async function renderRoomsList() {
       <div class="card-title">${escapeHtml(room.name)}</div>
       <div class="card-description">${escapeHtml(room.description || 'Sin descripción')}</div>
       <div class="card-meta">
-        ${room.exits ? `<span class="card-badge">${room.exits.length} salida${room.exits.length !== 1 ? 's' : ''}</span>` : ''}
+        ${room.exits?.length ? `<span class="card-badge">${room.exits.length} salida${room.exits.length !== 1 ? 's' : ''}</span>` : ''}
         <span>${room.id.slice(0, 8)}...</span>
+      </div>
+      <div class="card-actions" onclick="event.stopPropagation()">
+        <button class="btn btn-ghost btn-sm" onclick="window.location.hash='rooms/${room.id}'">Editar</button>
+        <button class="btn btn-danger btn-sm" onclick="window.deleteRoom('${room.id}', '${escapeHtml(room.name)}')">Eliminar</button>
       </div>
     </div>
   `).join('');
@@ -83,6 +85,11 @@ export async function renderRoomForm(roomId = null) {
   const flags = await getAll('flags');
   const exits = room?.exits || [];
 
+  // Store current room ID and available data on window for addExit()
+  window._currentRoomId = roomId;
+  window._availableRooms = otherRooms;
+  window._availableFlags = flags;
+
   const exitsHtml = exits.map((exit, i) => renderExitRow(exit, otherRooms, flags, i)).join('');
 
   renderWorkspace(`
@@ -109,9 +116,15 @@ export async function renderRoomForm(roomId = null) {
             ${room?.imageUrl
               ? `<img src="${room.imageUrl}" class="image-preview" id="room-image-preview">`
               : `<div class="image-upload-icon">&#128247;</div>
-                 <div class="image-upload-text">Arrastrá o hacé click para subir una imagen</div>
-                 <div class="image-upload-hint">JPG, PNG o GIF — Se sube a Firebase Storage</div>`
+                 <div class="image-upload-text">Subir imagen desde archivo</div>
+                 <div class="image-upload-hint">JPG, PNG o GIF</div>`
             }
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px;align-items:center;">
+            <span class="text-xs text-muted">O cargala desde URL:</span>
+            <input type="text" class="form-input" id="room-image-url-input" placeholder="https://ejemplo.com/imagen.jpg" value="${room?.imageUrl && !room.imageUrl.startsWith('data:') ? escapeHtml(room.imageUrl) : ''}" style="flex:1;padding:6px 10px;font-size:12px;">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="window.applyRoomImageUrl()">Aplicar</button>
+            ${room?.imageUrl ? `<button type="button" class="btn btn-ghost btn-sm" onclick="window.clearRoomImage()" style="color:var(--danger);border-color:transparent;">Quitar</button>` : ''}
           </div>
           <input type="hidden" id="room-image-url" value="${room?.imageUrl || ''}">
         </div>
@@ -129,7 +142,7 @@ export async function renderRoomForm(roomId = null) {
 
         <div class="flex gap-2 mt-6">
           <button type="submit" class="btn btn-primary btn-lg">${isNew ? 'Crear Habitación' : 'Guardar Cambios'}</button>
-          ${!isNew ? `<button type="button" class="btn btn-danger" id="btn-delete-room">Eliminar</button>` : ''}
+          ${!isNew ? `<button type="button" class="btn btn-danger" id="btn-delete-room">Eliminar Habitación</button>` : ''}
         </div>
       </form>
     </div>
@@ -220,16 +233,18 @@ function collectExits() {
   return exits;
 }
 
-// Expose functions to global scope for inline event handlers
-window.handleRoomImage = async function(event) {
+// ============================================
+// Image Handling
+// ============================================
+
+window.handleRoomImage = function(event) {
   const file = event.target.files[0];
   if (!file) return;
 
-  // For now, we convert to data URL since Storage needs additional setup
-  // In production, upload to Firebase Storage
   const reader = new FileReader();
   reader.onload = (e) => {
     document.getElementById('room-image-url').value = e.target.result;
+    document.getElementById('room-image-url-input').value = '';
     const uploadDiv = document.getElementById('room-image-upload');
     const existingImg = document.getElementById('room-image-preview');
     if (existingImg) {
@@ -248,14 +263,79 @@ window.handleRoomImage = async function(event) {
   reader.readAsDataURL(file);
 };
 
-window.addExit = function() {
+window.applyRoomImageUrl = function() {
+  const url = document.getElementById('room-image-url-input')?.value.trim();
+  if (!url) {
+    showToast('Escribí una URL primero', 'error');
+    return;
+  }
+  document.getElementById('room-image-url').value = url;
+  const uploadDiv = document.getElementById('room-image-upload');
+  const existingImg = document.getElementById('room-image-preview');
+  if (existingImg) {
+    existingImg.src = url;
+  } else {
+    const img = document.createElement('img');
+    img.src = url;
+    img.className = 'image-preview';
+    img.id = 'room-image-preview';
+    img.onerror = () => {
+      showToast('No se pudo cargar la imagen desde esa URL', 'error');
+      img.remove();
+    };
+    uploadDiv.querySelector('.image-upload-icon')?.remove();
+    uploadDiv.querySelector('.image-upload-text')?.remove();
+    uploadDiv.querySelector('.image-upload-hint')?.remove();
+    uploadDiv.insertBefore(img, uploadDiv.firstChild);
+  }
+  showToast('Imagen aplicada', 'success');
+};
+
+window.clearRoomImage = function() {
+  document.getElementById('room-image-url').value = '';
+  document.getElementById('room-image-url-input').value = '';
+  const img = document.getElementById('room-image-preview');
+  if (img) img.remove();
+  const uploadDiv = document.getElementById('room-image-upload');
+  if (uploadDiv && !uploadDiv.querySelector('.image-upload-icon')) {
+    uploadDiv.insertAdjacentHTML('afterbegin', `
+      <div class="image-upload-icon">&#128247;</div>
+      <div class="image-upload-text">Subir imagen desde archivo</div>
+      <div class="image-upload-hint">JPG, PNG o GIF</div>
+    `);
+  }
+};
+
+// ============================================
+// Add Exit — fetches fresh data from DB
+// ============================================
+
+window.addExit = async function() {
   const container = document.getElementById('exits-container');
+  if (!container) return;
+
   const count = container.querySelectorAll('.dynamic-array-item').length;
-  // We need to re-render with updated rooms/flags, so let's call a function
-  // For simplicity, we clone the last exit's select options
-  const lastItem = container.querySelector('.dynamic-array-item:last-child');
-  const roomSelect = lastItem?.querySelectorAll('.form-select')[0]?.innerHTML || '';
-  const flagSelect = lastItem?.querySelectorAll('.form-select')[1]?.innerHTML || '';
+
+  // Try to get rooms/flags from the cached window data
+  // If empty (first exit on a new room), fetch fresh from DB
+  let roomsList = window._availableRooms || [];
+  let flagsList = window._availableFlags || [];
+
+  if (roomsList.length === 0) {
+    try {
+      const [allRooms, allFlags] = await Promise.all([
+        getAll('rooms'),
+        getAll('flags')
+      ]);
+      // Exclude current room
+      roomsList = allRooms.filter(r => r.id !== window._currentRoomId);
+      flagsList = allFlags;
+      window._availableRooms = roomsList;
+      window._availableFlags = flagsList;
+    } catch (err) {
+      console.error('Error fetching rooms/flags:', err);
+    }
+  }
 
   const html = `
     <div class="dynamic-array-item" data-exit-index="${count}">
@@ -270,14 +350,27 @@ window.addExit = function() {
         </div>
         <div class="form-group">
           <label class="form-label">Habitación Destino</label>
-          <select class="form-select">${roomSelect}</select>
+          ${createSelect(roomsList, '', '— Seleccionar destino —')}
         </div>
       </div>
       <div class="form-group" style="margin-bottom:0">
         <label class="form-label">Condición (Flag)</label>
-        <select class="form-select">${flagSelect}</select>
+        ${createSelect(flagsList, '', '— Sin condición (siempre accesible) —')}
       </div>
     </div>
   `;
   container.insertAdjacentHTML('beforeend', html);
+};
+
+// ============================================
+// Delete from list view
+// ============================================
+
+window.deleteRoom = async function(roomId, name) {
+  const ok = await confirm(`¿Eliminás "${name}"? Esta acción no se puede deshacer.`);
+  if (ok) {
+    await remove('rooms', roomId);
+    showToast('Habitación eliminada', 'success');
+    renderRoomsList();
+  }
 };

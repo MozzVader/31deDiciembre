@@ -49,6 +49,10 @@ export async function renderCharactersList() {
           <span class="card-badge">${escapeHtml(startRoom)}</span>
           <span>${char.id.slice(0, 8)}...</span>
         </div>
+        <div class="card-actions" onclick="event.stopPropagation()">
+          <button class="btn btn-ghost btn-sm" onclick="window.location.hash='characters/${char.id}'">Editar</button>
+          <button class="btn btn-danger btn-sm" onclick="window.deleteCharacter('${char.id}', '${escapeHtml(char.name)}')">Eliminar</button>
+        </div>
       </div>
     `;
   }).join('');
@@ -84,6 +88,8 @@ export async function renderCharacterForm(charId = null) {
 
   const rooms = await getAll('rooms');
   const dialogues = await getAll('dialogues');
+
+  const avatarStyle = 'max-height:150px;max-width:150px;border-radius:50%;object-fit:cover;';
 
   renderWorkspace(`
     <div class="detail-header">
@@ -122,20 +128,26 @@ export async function renderCharacterForm(charId = null) {
 
         <div class="form-group">
           <label class="form-label">Avatar</label>
-          <div class="image-upload" id="char-image-upload">
+          <div class="image-upload" id="char-image-upload" style="padding:16px;">
             <input type="file" accept="image/*" id="char-image-file" onchange="window.handleCharImage(event)">
             ${character?.avatarUrl
-              ? `<img src="${character.avatarUrl}" class="image-preview" id="char-image-preview" style="max-height:150px;max-width:150px;border-radius:50%;object-fit:cover;">`
+              ? `<img src="${character.avatarUrl}" class="image-preview" id="char-image-preview" style="${avatarStyle}">`
               : `<div class="image-upload-icon">&#128100;</div>
                  <div class="image-upload-text">Subir avatar del personaje</div>`
             }
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px;align-items:center;">
+            <span class="text-xs text-muted">O desde URL:</span>
+            <input type="text" class="form-input" id="char-avatar-url-input" placeholder="https://ejemplo.com/avatar.png" value="${character?.avatarUrl && !character.avatarUrl.startsWith('data:') ? escapeHtml(character.avatarUrl) : ''}" style="flex:1;padding:6px 10px;font-size:12px;">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="window.applyCharAvatarUrl()">Aplicar</button>
+            ${character?.avatarUrl ? `<button type="button" class="btn btn-ghost btn-sm" onclick="window.clearCharAvatar()" style="color:var(--danger);border-color:transparent;">Quitar</button>` : ''}
           </div>
           <input type="hidden" id="char-avatar-url" value="${character?.avatarUrl || ''}">
         </div>
 
         <div class="flex gap-2 mt-6">
           <button type="submit" class="btn btn-primary btn-lg">${isNew ? 'Crear Personaje' : 'Guardar Cambios'}</button>
-          ${!isNew ? `<button type="button" class="btn btn-danger" id="btn-delete-char">Eliminar</button>` : ''}
+          ${!isNew ? `<button type="button" class="btn btn-danger" id="btn-delete-char">Eliminar Personaje</button>` : ''}
         </div>
       </form>
     </div>
@@ -185,13 +197,20 @@ export async function renderCharacterForm(charId = null) {
   }
 }
 
-window.handleCharImage = async function(event) {
+// ============================================
+// Avatar Handling
+// ============================================
+
+const AVATAR_STYLE = 'max-height:150px;max-width:150px;border-radius:50%;object-fit:cover;';
+
+window.handleCharImage = function(event) {
   const file = event.target.files[0];
   if (!file) return;
 
   const reader = new FileReader();
   reader.onload = (e) => {
     document.getElementById('char-avatar-url').value = e.target.result;
+    document.getElementById('char-avatar-url-input').value = '';
     const uploadDiv = document.getElementById('char-image-upload');
     const existingImg = document.getElementById('char-image-preview');
     if (existingImg) {
@@ -201,11 +220,66 @@ window.handleCharImage = async function(event) {
       img.src = e.target.result;
       img.className = 'image-preview';
       img.id = 'char-image-preview';
-      img.style.cssText = 'max-height:150px;max-width:150px;border-radius:50%;object-fit:cover;';
+      img.style.cssText = AVATAR_STYLE;
       uploadDiv.querySelector('.image-upload-icon')?.remove();
       uploadDiv.querySelector('.image-upload-text')?.remove();
       uploadDiv.insertBefore(img, uploadDiv.firstChild);
     }
   };
   reader.readAsDataURL(file);
+};
+
+window.applyCharAvatarUrl = function() {
+  const url = document.getElementById('char-avatar-url-input')?.value.trim();
+  if (!url) {
+    showToast('Escribí una URL primero', 'error');
+    return;
+  }
+  document.getElementById('char-avatar-url').value = url;
+  const uploadDiv = document.getElementById('char-image-upload');
+  const existingImg = document.getElementById('char-image-preview');
+  if (existingImg) {
+    existingImg.src = url;
+  } else {
+    const img = document.createElement('img');
+    img.src = url;
+    img.className = 'image-preview';
+    img.id = 'char-image-preview';
+    img.style.cssText = AVATAR_STYLE;
+    img.onerror = () => {
+      showToast('No se pudo cargar la imagen desde esa URL', 'error');
+      img.remove();
+    };
+    uploadDiv.querySelector('.image-upload-icon')?.remove();
+    uploadDiv.querySelector('.image-upload-text')?.remove();
+    uploadDiv.insertBefore(img, uploadDiv.firstChild);
+  }
+  showToast('Avatar aplicado', 'success');
+};
+
+window.clearCharAvatar = function() {
+  document.getElementById('char-avatar-url').value = '';
+  document.getElementById('char-avatar-url-input').value = '';
+  const img = document.getElementById('char-image-preview');
+  if (img) img.remove();
+  const uploadDiv = document.getElementById('char-image-upload');
+  if (uploadDiv && !uploadDiv.querySelector('.image-upload-icon')) {
+    uploadDiv.insertAdjacentHTML('afterbegin', `
+      <div class="image-upload-icon">&#128100;</div>
+      <div class="image-upload-text">Subir avatar del personaje</div>
+    `);
+  }
+};
+
+// ============================================
+// Delete from list view
+// ============================================
+
+window.deleteCharacter = async function(charId, name) {
+  const ok = await confirm(`¿Eliminás "${name}"?`);
+  if (ok) {
+    await remove('characters', charId);
+    showToast('Personaje eliminado', 'success');
+    renderCharactersList();
+  }
 };

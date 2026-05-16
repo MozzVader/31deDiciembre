@@ -406,7 +406,9 @@ const ITEM_INTERACTION_TYPE_LABELS = {
   examine: 'Examinar (Clic Derecho)',
   use: 'Usar (Clic Izquierdo)',
   open: 'Abrir',
-  close: 'Cerrar'
+  close: 'Cerrar',
+  pick_up: 'Recoger (Pick Up)',
+  give: 'Dar (Give)'
 };
 
 const ITEM_ACTION_LABELS = {
@@ -438,6 +440,8 @@ function renderItemInteractionRow(interaction, index, data) {
             <option value="use" ${type === 'use' ? 'selected' : ''}>Usar (Clic Izquierdo)</option>
             <option value="open" ${type === 'open' ? 'selected' : ''}>Abrir</option>
             <option value="close" ${type === 'close' ? 'selected' : ''}>Cerrar</option>
+            <option value="pick_up" ${type === 'pick_up' ? 'selected' : ''}>Recoger (Pick Up)</option>
+            <option value="give" ${type === 'give' ? 'selected' : ''}>Dar (Give)</option>
           </select>
           <div class="form-hint">Examinar: mirar el item. Usar: usar el item. Abrir/Cerrar: para items con estados (cajas, puertas, recipientes).</div>
         </div>

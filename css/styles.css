@@ -1663,3 +1663,170 @@ a:hover {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ---------- Form Section Divider ---------- */
+.form-section-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 32px 0 24px;
+  opacity: 0.5;
+}
+
+/* ---------- Hotspot Cards (Collapsible) ---------- */
+.hotspot-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hotspot-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: border-color var(--transition-fast);
+}
+
+.hotspot-card:hover {
+  border-color: var(--border-light);
+}
+
+.hotspot-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  user-select: none;
+  border-left: 3px solid var(--warning);
+}
+
+.hotspot-card-header:hover {
+  background: var(--bg-card-hover);
+}
+
+.hotspot-card-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.hotspot-icon {
+  color: var(--warning);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.hotspot-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hotspot-slug-label {
+  color: var(--text-muted);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.hotspot-card-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.hotspot-chevron {
+  color: var(--text-muted);
+  font-size: 12px;
+  transition: transform var(--transition-fast);
+}
+
+.hotspot-card.collapsed .hotspot-chevron {
+  transform: rotate(-90deg);
+}
+
+.hotspot-card-body {
+  padding: 16px 16px 4px;
+  border-top: 1px solid var(--border);
+}
+
+.hotspot-card.collapsed .hotspot-card-body {
+  display: none;
+}
+
+/* ---------- Interaction Cards ---------- */
+.interaction-card {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--info);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  margin-bottom: 8px;
+}
+
+.interaction-card:last-child {
+  margin-bottom: 0;
+}
+
+.interaction-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.interaction-card-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.interaction-card-header-left i {
+  color: var(--info);
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.interaction-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--info);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- Hotspot Action Cards ---------- */
+.hs-action-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--success);
+  border-radius: 4px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+}
+
+.hs-action-card:last-child {
+  margin-bottom: 0;
+}
+
+.hs-action-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.hs-action-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--success);
+}

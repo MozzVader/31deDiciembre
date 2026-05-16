@@ -64,6 +64,33 @@ export async function exportProject() {
           direction: exit.direction,
           targetSlug: roomSlugMap[exit.targetRoomId] || null,
           conditionSlug: exit.conditionFlag || null
+        })),
+        hotspots: (room.hotspots || []).map(hs => ({
+          slug: hs.slug || '',
+          name: hs.name || '',
+          description: hs.description || "",
+          connectedItemSlug: hs.connectedItemSlug || null,
+          interactions: (hs.interactions || []).map(int => ({
+            type: int.type || 'examine',
+            requiredItemSlug: int.requiredItemSlug || null,
+            conditionSlug: int.conditionSlug || null,
+            actions: (int.actions || []).map(act => {
+              const a = { type: act.type };
+              if (act.type === 'StartDialogue') {
+                a.dialogueSlug = act.dialogueSlug || null;
+                if (act.nodeSlug) a.nodeSlug = act.nodeSlug;
+              } else if (act.type === 'AddItem' || act.type === 'RemoveItem') {
+                a.itemSlug = act.itemSlug || null;
+              } else if (act.type === 'SetFlag') {
+                a.flagSlug = act.flagSlug || null;
+                a.value = act.value ?? true;
+              } else if (act.type === 'ChangeHotspotState') {
+                a.hotspotSlug = act.hotspotSlug || null;
+                a.newState = act.newState || null;
+              }
+              return a;
+            })
+          }))
         }))
       })),
 

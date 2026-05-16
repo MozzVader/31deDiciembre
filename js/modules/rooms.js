@@ -1,5 +1,5 @@
 // ============================================
-// Módulo: Habitaciones (Rooms)
+// Módulo: Habitaciones (Rooms) — con Hotspots
 // ============================================
 import { getAll, create, update, remove, getOne } from '../db.js';
 import { renderWorkspace, setBreadcrumbs, updateBadge, showToast, confirm, escapeHtml, createSelect } from '../ui.js';
@@ -14,7 +14,30 @@ function generateSlug(prefix, name) {
   return `${prefix}_${base}`;
 }
 
+/** createSelect with optional extra CSS class */
+function sel(items, selected, placeholder, extraClass) {
+  const html = createSelect(items, selected, placeholder);
+  return extraClass ? html.replace('class="form-select"', `class="form-select ${extraClass}"`) : html;
+}
+
+/** Get current hotspot options from the form DOM */
+function getRoomHotspotOptions() {
+  const opts = [];
+  const container = document.getElementById('hotspots-container');
+  if (!container) return opts;
+  container.querySelectorAll('.hotspot-card').forEach(card => {
+    const slug = card.querySelector('.hotspot-slug')?.value.trim() || '';
+    const name = card.querySelector('.hotspot-name')?.value.trim() || '';
+    if (slug) opts.push({ id: slug, name: name || slug });
+  });
+  return opts;
+}
+
 let rooms = [];
+
+// ============================================
+// Room List
+// ============================================
 
 export async function renderRoomsList() {
   setBreadcrumbs([{ label: 'Habitaciones' }]);
@@ -33,7 +56,7 @@ export async function renderRoomsList() {
       <div class="empty-state">
         <div class="empty-state-icon"><i class="fa-solid fa-house" style="font-size:48px;"></i></div>
         <div class="empty-state-title">No hay habitaciones todavía</div>
-        <div class="empty-state-text">Creá la primera habitación de tu aventura. Cada habitación es un espacio donde el jugador puede explorar e interactuar.</div>
+        <div class="empty-state-text">Creá la primera habitación de tu aventura. Cada habitación es un espacio donde el jugador puede explorar e interactuar con objetos de escena.</div>
         <button class="btn btn-primary" onclick="window.location.hash='rooms/new'">+ Crear Habitación</button>
       </div>
     `);
@@ -56,6 +79,11 @@ export async function renderRoomsList() {
       ? exitNames.map(n => `<span class="card-badge">${escapeHtml(n)}</span>`).join('')
       : '<span style="color:var(--text-muted)">Sin salidas</span>';
 
+    const hsCount = (room.hotspots || []).length;
+    const hsHtml = hsCount > 0
+      ? `<span class="card-badge"><i class="fa-solid fa-crosshairs" style="font-size:10px;margin-right:3px;"></i>${hsCount} hotspot${hsCount !== 1 ? 's' : ''}</span>`
+      : '';
+
     return `
     <div class="card" onclick="window.location.hash='rooms/${room.id}'">
       <div class="card-thumb">
@@ -65,6 +93,7 @@ export async function renderRoomsList() {
       <div class="card-description">${escapeHtml(room.description || 'Sin descripción')}</div>
       <div class="card-meta">
         ${exitsHtml}
+        ${hsHtml}
       </div>
       <div class="card-actions" onclick="event.stopPropagation()">
         <button class="btn btn-ghost btn-sm" onclick="window.location.hash='rooms/${room.id}'">Editar</button>
@@ -86,6 +115,10 @@ export async function renderRoomsList() {
   `);
 }
 
+// ============================================
+// Room Form
+// ============================================
+
 export async function renderRoomForm(roomId = null) {
   const isNew = !roomId;
   setBreadcrumbs([
@@ -103,27 +136,33 @@ export async function renderRoomForm(roomId = null) {
     }
   }
 
-  // Get other rooms for exit targets
-  const allRooms = await getAll('rooms');
+  // Fetch data for all dropdowns
+  const [allRooms, flags, items, dialogues] = await Promise.all([
+    getAll('rooms'),
+    getAll('flags'),
+    getAll('items'),
+    getAll('dialogues')
+  ]);
+
   const otherRooms = allRooms.filter(r => r.id !== roomId);
-
-  // Get flags for exit conditions
-  const flags = await getAll('flags');
   const exits = room?.exits || [];
+  const hotspots = room?.hotspots || [];
 
-  // Store current room ID and available data on window for addExit()
+  // Store on window for dynamic add functions
   window._currentRoomId = roomId;
   window._availableRooms = otherRooms;
   window._availableFlags = flags;
+  window._roomFormData = { items, flags, dialogues };
 
   const exitsHtml = exits.map((exit, i) => renderExitRow(exit, otherRooms, flags, i)).join('');
+  const hotspotsHtml = hotspots.map((hs, i) => renderHotspotCard(hs, i, { items, flags, dialogues })).join('');
 
   renderWorkspace(`
     <div class="detail-header">
       <button class="detail-back" onclick="window.location.hash='rooms'"><i class="fa-solid fa-arrow-left"></i> Volver</button>
       <h1 class="detail-title">${isNew ? 'Nueva Habitación' : escapeHtml(room.name)}</h1>
     </div>
-    <div class="form-container">
+    <div class="form-container" style="max-width:960px;">
       <form id="room-form">
         <div class="form-row">
           <div class="form-group">
@@ -162,6 +201,7 @@ export async function renderRoomForm(roomId = null) {
           <input type="hidden" id="room-image-url" value="${room?.imageUrl || ''}">
         </div>
 
+        <!-- Salidas (Exits) -->
         <div class="form-group">
           <label class="form-label">Salidas</label>
           <div class="form-hint">Definí cómo el jugador puede salir de esta habitación hacia otras.</div>
@@ -173,6 +213,22 @@ export async function renderRoomForm(roomId = null) {
           </button>
         </div>
 
+        <!-- ========== HOTSPOTS (Objetos de Escena) ========== -->
+        <hr class="form-section-divider">
+        <div class="form-group">
+          <label class="form-label">
+            <i class="fa-solid fa-crosshairs" style="color:var(--warning);margin-right:6px;"></i>
+            Objetos de Escena (Hotspots)
+          </label>
+          <div class="form-hint">Los objetos interactivos dibujados en el fondo de la habitación. Cada uno puede tener múltiples interacciones: examinar, usar un item, recoger, hablar. El puente entre hotspot e item: si Diego agarra un vaso de la mesa, el hotspot cambia de estado y se agrega el item al inventario.</div>
+          <div id="hotspots-container" class="hotspot-section">
+            ${hotspotsHtml}
+          </div>
+          <button type="button" class="dynamic-array-add mt-2" onclick="window.addHotspot()">
+            + Añadir Objeto de Escena
+          </button>
+        </div>
+
         <div class="flex gap-2 mt-6">
           <button type="submit" class="btn btn-primary btn-lg">${isNew ? 'Crear Habitación' : 'Guardar Cambios'}</button>
           ${!isNew ? `<button type="button" class="btn btn-danger" id="btn-delete-room">Eliminar Habitación</button>` : ''}
@@ -181,7 +237,7 @@ export async function renderRoomForm(roomId = null) {
     </div>
   `);
 
-  // Auto-generate slug from name
+  // Auto-generate room slug from name
   const slugInput = document.getElementById('room-slug');
   const nameInput = document.getElementById('room-name');
   nameInput.addEventListener('input', () => {
@@ -193,16 +249,19 @@ export async function renderRoomForm(roomId = null) {
     slugInput.dataset.manual = '1';
   });
 
+  // Attach hotspot name → slug auto-generation
+  attachHotspotListeners();
+
   // Form submission
   document.getElementById('room-form').onsubmit = async (e) => {
     e.preventDefault();
-    const exits = collectExits();
     const data = {
       slug: document.getElementById('room-slug').value.trim(),
       name: document.getElementById('room-name').value.trim(),
       description: document.getElementById('room-description').value.trim(),
       imageUrl: document.getElementById('room-image-url').value,
-      exits
+      exits: collectExits(),
+      hotspots: collectHotspots()
     };
 
     if (!data.slug) data.slug = generateSlug('room', data.name);
@@ -239,8 +298,523 @@ export async function renderRoomForm(roomId = null) {
   }
 }
 
+// ============================================
+// Hotspot Card — Collapsible
+// ============================================
+
+function renderHotspotCard(hotspot, index, data) {
+  const interactions = (hotspot.interactions || [])
+    .map((int, i) => renderInteractionRow(int, i, data)).join('');
+  const itemOpts = data.items.map(i => ({ id: i.slug || i.id, name: i.name }));
+
+  return `
+    <div class="hotspot-card" data-hotspot-index="${index}">
+      <div class="hotspot-card-header" onclick="this.closest('.hotspot-card').classList.toggle('collapsed')">
+        <div class="hotspot-card-header-left">
+          <i class="fa-solid fa-crosshairs hotspot-icon"></i>
+          <span class="hotspot-card-title">${escapeHtml(hotspot.name) || `Hotspot #${index + 1}`}</span>
+          <span class="hotspot-slug-label font-mono text-xs text-muted">${escapeHtml(hotspot.slug || '')}</span>
+        </div>
+        <div class="hotspot-card-header-right">
+          <button type="button" class="dynamic-array-remove" onclick="event.stopPropagation(); this.closest('.hotspot-card').remove()">&times;</button>
+          <i class="fa-solid fa-chevron-down hotspot-chevron"></i>
+        </div>
+      </div>
+      <div class="hotspot-card-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Nombre</label>
+            <input type="text" class="form-input hotspot-name" placeholder="Ej: Cubetera vacía" value="${escapeHtml(hotspot.name || '')}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Slug</label>
+            <input type="text" class="form-input font-mono hotspot-slug" placeholder="Ej: hotspot_cubetera" value="${escapeHtml(hotspot.slug || '')}">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Descripción (para el dev)</label>
+          <textarea class="form-textarea hotspot-description" rows="2" placeholder="Una vieja cubetera de metal. Está vacía y con manchas de condensación.">${escapeHtml(hotspot.description || '')}</textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Item Conectado (opcional)</label>
+          ${sel(itemOpts, hotspot.connectedItemSlug || '', '— Ninguno —', 'hotspot-connected-item')}
+          <div class="form-hint">Si al interactuar con este hotspot se agrega un item al inventario, conectalo acá. Te ayuda a mantener la traza: "este hotspot de la mesa está conectado al item Vaso de mi base de datos".</div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Interacciones</label>
+          <div class="form-hint">Definí qué puede hacer el jugador con este objeto de escena.</div>
+          <div class="dynamic-array hotspot-interactions-container">
+            ${interactions}
+          </div>
+          <button type="button" class="dynamic-array-add mt-2" onclick="window.addHotspotInteraction(this.closest('.hotspot-card'))">
+            + Añadir Interacción
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ============================================
+// Interaction Row
+// ============================================
+
+const INTERACTION_TYPE_LABELS = {
+  examine: 'Examinar (Mirar)',
+  use_item: 'Usar Item sobre esto',
+  pick_up: 'Recoger (Pick Up)',
+  talk_to: 'Hablar con'
+};
+
+function renderInteractionRow(interaction, index, data) {
+  const type = interaction.type || 'examine';
+  const actions = (interaction.actions || [])
+    .map((act, i) => renderHotspotActionRow(act, i, data)).join('');
+  const itemOpts = data.items.map(i => ({ id: i.slug || i.id, name: i.name }));
+  const flagOpts = data.flags.map(f => ({ id: f.name, name: f.name }));
+
+  return `
+    <div class="interaction-card" data-interaction-index="${index}">
+      <div class="interaction-card-header">
+        <div class="interaction-card-header-left">
+          <i class="fa-solid fa-hand-pointer"></i>
+          <span class="interaction-title">Interacción #${index + 1} — ${INTERACTION_TYPE_LABELS[type] || type}</span>
+        </div>
+        <button type="button" class="dynamic-array-remove" onclick="this.closest('.interaction-card').remove()">&times;</button>
+      </div>
+      <div class="interaction-card-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Tipo de Interacción</label>
+            <select class="form-select interaction-type" onchange="window.handleInteractionTypeChange(this)">
+              <option value="examine" ${type === 'examine' ? 'selected' : ''}>Examinar (Mirar)</option>
+              <option value="use_item" ${type === 'use_item' ? 'selected' : ''}>Usar Item sobre esto</option>
+              <option value="pick_up" ${type === 'pick_up' ? 'selected' : ''}>Recoger (Pick Up)</option>
+              <option value="talk_to" ${type === 'talk_to' ? 'selected' : ''}>Hablar con</option>
+            </select>
+          </div>
+          <div class="form-group interaction-required-item-wrap" style="${type !== 'use_item' ? 'display:none' : ''}">
+            <label class="form-label">Item Requerido</label>
+            ${sel(itemOpts, interaction.requiredItemSlug || '', '— Seleccionar item —', 'interaction-required-item')}
+            <div class="form-hint">El item del inventario que el jugador necesita usar sobre este hotspot.</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Condición (Flag)</label>
+          ${sel(flagOpts, interaction.conditionSlug || '', '— Sin condición (siempre accesible) —', 'interaction-condition')}
+          <div class="form-hint">La interacción solo está disponible si este flag está activo.</div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Acciones (Resultados)</label>
+          <div class="dynamic-array interaction-actions-container">
+            ${actions}
+          </div>
+          <button type="button" class="dynamic-array-add mt-2" onclick="window.addHotspotAction(this.closest('.interaction-card'))">
+            + Añadir Acción
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ============================================
+// Hotspot Action Row
+// ============================================
+
+const HS_ACTION_LABELS = {
+  StartDialogue: 'Iniciar Diálogo',
+  AddItem: 'Agregar Item al Inventario',
+  RemoveItem: 'Quitar Item del Inventario',
+  SetFlag: 'Cambiar Flag',
+  ChangeHotspotState: 'Cambiar Estado del Hotspot'
+};
+
+function renderHotspotActionRow(action, index, data) {
+  const type = action.type || 'StartDialogue';
+
+  // Resolve target and value based on action type
+  let targetVal = '';
+  let valueVal = '';
+  switch (type) {
+    case 'StartDialogue':
+      targetVal = action.dialogueSlug || '';
+      valueVal = action.nodeSlug || '';
+      break;
+    case 'AddItem':
+    case 'RemoveItem':
+      targetVal = action.itemSlug || '';
+      break;
+    case 'SetFlag':
+      targetVal = action.flagSlug || '';
+      valueVal = action.value !== undefined ? String(action.value) : '';
+      break;
+    case 'ChangeHotspotState':
+      targetVal = action.hotspotSlug || '';
+      valueVal = action.newState || '';
+      break;
+  }
+
+  const { targetHtml, valueHtml } = hsActionFieldsHtml(type, data, targetVal, valueVal);
+
+  return `
+    <div class="hs-action-card" data-hs-action-index="${index}">
+      <div class="hs-action-card-header">
+        <span class="hs-action-title">${HS_ACTION_LABELS[type] || type}</span>
+        <button type="button" class="dynamic-array-remove" onclick="this.closest('.hs-action-card').remove()">&times;</button>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Tipo de Acción</label>
+          <select class="form-select hs-action-type" onchange="window.handleHsActionTypeChange(this)">
+            <option value="StartDialogue" ${type === 'StartDialogue' ? 'selected' : ''}>Iniciar Diálogo</option>
+            <option value="AddItem" ${type === 'AddItem' ? 'selected' : ''}>Agregar Item</option>
+            <option value="RemoveItem" ${type === 'RemoveItem' ? 'selected' : ''}>Quitar Item</option>
+            <option value="SetFlag" ${type === 'SetFlag' ? 'selected' : ''}>Cambiar Flag</option>
+            <option value="ChangeHotspotState" ${type === 'ChangeHotspotState' ? 'selected' : ''}>Cambiar Estado Hotspot</option>
+          </select>
+        </div>
+        <div class="form-group hs-action-target-wrap">
+          ${targetHtml}
+        </div>
+        <div class="form-group hs-action-value-wrap" ${!valueHtml ? 'style="display:none"' : ''}>
+          ${valueHtml}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/** Build target + value HTML for a hotspot action based on its type */
+function hsActionFieldsHtml(type, data, targetVal, valueVal) {
+  let targetHtml = '';
+  let valueHtml = '';
+
+  switch (type) {
+    case 'StartDialogue': {
+      const dlgOpts = data.dialogues.map(d => ({ id: d.slug || d.id, name: d.name }));
+      targetHtml = `<label class="form-label">Diálogo</label>
+        ${sel(dlgOpts, targetVal, '— Seleccionar diálogo —', 'hs-action-target')}`;
+      valueHtml = `<label class="form-label">Nodo Inicial (opcional)</label>
+        <input type="text" class="form-input hs-action-value font-mono" placeholder="Ej: node_inicio" value="${escapeHtml(valueVal || '')}">
+        <div class="form-hint">Dejá vacío para arrancar desde el primer nodo.</div>`;
+      break;
+    }
+    case 'AddItem':
+    case 'RemoveItem': {
+      const itemOpts = data.items.map(i => ({ id: i.slug || i.id, name: i.name }));
+      targetHtml = `<label class="form-label">Item</label>
+        ${sel(itemOpts, targetVal, '— Seleccionar item —', 'hs-action-target')}`;
+      break;
+    }
+    case 'SetFlag': {
+      const flagOpts = data.flags.map(f => ({ id: f.name, name: f.name }));
+      targetHtml = `<label class="form-label">Flag</label>
+        ${sel(flagOpts, targetVal, '— Seleccionar flag —', 'hs-action-target')}`;
+      valueHtml = `<label class="form-label">Valor</label>
+        <select class="form-select hs-action-value">
+          <option value="true" ${valueVal === 'true' ? 'selected' : ''}>true</option>
+          <option value="false" ${valueVal === 'false' ? 'selected' : ''}>false</option>
+        </select>`;
+      break;
+    }
+    case 'ChangeHotspotState': {
+      const hsOpts = getRoomHotspotOptions();
+      targetHtml = `<label class="form-label">Hotspot</label>
+        ${sel(hsOpts, targetVal, '— Seleccionar hotspot —', 'hs-action-target')}`;
+      valueHtml = `<label class="form-label">Nuevo Estado</label>
+        <input type="text" class="form-input hs-action-value" placeholder="Ej: llena, abierta, rota" value="${escapeHtml(valueVal || '')}">
+        <div class="form-hint">El estado que va a tomar el hotspot. El motor lo usa para cambiar el gráfico o la descripción.</div>`;
+      break;
+    }
+  }
+
+  return { targetHtml, valueHtml };
+}
+
+// ============================================
+// Collection Functions
+// ============================================
+
+function collectExits() {
+  const container = document.getElementById('exits-container');
+  const items = container.querySelectorAll('.dynamic-array-item');
+  const exits = [];
+  items.forEach(item => {
+    const direction = item.querySelector('.exit-direction')?.value.trim() || '';
+    const selects = item.querySelectorAll('.form-select');
+    const targetRoomId = selects[0]?.value || '';
+    const conditionFlag = selects[1]?.value || '';
+    if (direction) {
+      exits.push({ direction, targetRoomId, conditionFlag });
+    }
+  });
+  return exits;
+}
+
+function collectHotspots() {
+  const container = document.getElementById('hotspots-container');
+  if (!container) return [];
+  const cards = container.querySelectorAll('.hotspot-card');
+  const hotspots = [];
+
+  cards.forEach(card => {
+    const name = card.querySelector('.hotspot-name')?.value.trim() || '';
+    if (!name) return;
+
+    const slug = card.querySelector('.hotspot-slug')?.value.trim() || '';
+    const description = card.querySelector('.hotspot-description')?.value.trim() || '';
+    const connectedItemSlug = card.querySelector('.hotspot-connected-item')?.value || '';
+    const interactions = collectInteractions(card);
+
+    hotspots.push({
+      slug: slug || generateSlug('hotspot', name),
+      name,
+      description,
+      connectedItemSlug: connectedItemSlug || null,
+      interactions
+    });
+  });
+
+  return hotspots;
+}
+
+function collectInteractions(hotspotCard) {
+  const container = hotspotCard.querySelector('.hotspot-interactions-container');
+  if (!container) return [];
+  const cards = container.querySelectorAll('.interaction-card');
+  const interactions = [];
+
+  cards.forEach(card => {
+    const type = card.querySelector('.interaction-type')?.value || '';
+    const requiredItemSlug = card.querySelector('.interaction-required-item')?.value || '';
+    const conditionSlug = card.querySelector('.interaction-condition')?.value || '';
+    const actions = collectHsActions(card);
+
+    interactions.push({
+      type,
+      requiredItemSlug: type === 'use_item' ? (requiredItemSlug || null) : null,
+      conditionSlug: conditionSlug || null,
+      actions
+    });
+  });
+
+  return interactions;
+}
+
+function collectHsActions(interactionCard) {
+  const container = interactionCard.querySelector('.interaction-actions-container');
+  if (!container) return [];
+  const cards = container.querySelectorAll('.hs-action-card');
+  const actions = [];
+
+  cards.forEach(card => {
+    const type = card.querySelector('.hs-action-type')?.value || '';
+    const target = card.querySelector('.hs-action-target')?.value?.trim() || '';
+    const value = card.querySelector('.hs-action-value')?.value?.trim() || '';
+    if (!type) return;
+
+    const action = { type };
+
+    switch (type) {
+      case 'StartDialogue':
+        action.dialogueSlug = target || null;
+        action.nodeSlug = value || null;
+        break;
+      case 'AddItem':
+      case 'RemoveItem':
+        action.itemSlug = target || null;
+        break;
+      case 'SetFlag':
+        action.flagSlug = target || null;
+        action.value = value === 'true' ? true : (value === 'false' ? false : value);
+        break;
+      case 'ChangeHotspotState':
+        action.hotspotSlug = target || null;
+        action.newState = value || null;
+        break;
+    }
+
+    actions.push(action);
+  });
+
+  return actions;
+}
+
+// ============================================
+// Window Functions — Dynamic Add
+// ============================================
+
+window.addExit = async function() {
+  const container = document.getElementById('exits-container');
+  if (!container) return;
+
+  const count = container.querySelectorAll('.dynamic-array-item').length;
+
+  let roomsList = window._availableRooms || [];
+  let flagsList = window._availableFlags || [];
+
+  if (roomsList.length === 0) {
+    try {
+      const [allRooms, allFlags] = await Promise.all([
+        getAll('rooms'),
+        getAll('flags')
+      ]);
+      roomsList = allRooms.filter(r => r.id !== window._currentRoomId);
+      flagsList = allFlags;
+      window._availableRooms = roomsList;
+      window._availableFlags = flagsList;
+    } catch (err) {
+      console.error('Error fetching rooms/flags:', err);
+    }
+  }
+
+  const html = `
+    <div class="dynamic-array-item" data-exit-index="${count}">
+      <div class="dynamic-array-item-header">
+        <span class="dynamic-array-item-title">Salida #${count + 1}</span>
+        <button type="button" class="dynamic-array-remove" onclick="this.closest('.dynamic-array-item').remove()">&times;</button>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Dirección / Nombre</label>
+          <input type="text" class="form-input exit-direction" placeholder='Ej: "Puerta Amarilla"'>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Habitación Destino</label>
+          ${createSelect(roomsList, '', '— Seleccionar destino —')}
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Condición (Flag)</label>
+        ${createSelect(flagsList, '', '— Sin condición (siempre accesible) —')}
+      </div>
+    </div>
+  `;
+  container.insertAdjacentHTML('beforeend', html);
+};
+
+window.addHotspot = function() {
+  const container = document.getElementById('hotspots-container');
+  if (!container) return;
+
+  const count = container.querySelectorAll('.hotspot-card').length;
+  const data = window._roomFormData || {};
+
+  const html = renderHotspotCard({}, count, data);
+  container.insertAdjacentHTML('beforeend', html);
+
+  // Attach name → slug auto-generation to the new card
+  const newCard = container.querySelector(`.hotspot-card[data-hotspot-index="${count}"]`);
+  if (newCard) attachSingleHotspotListeners(newCard, count);
+};
+
+window.addHotspotInteraction = function(hotspotCard) {
+  const container = hotspotCard.querySelector('.hotspot-interactions-container');
+  if (!container) return;
+
+  const count = container.querySelectorAll('.interaction-card').length;
+  const data = window._roomFormData || {};
+
+  const html = renderInteractionRow({}, count, data);
+  container.insertAdjacentHTML('beforeend', html);
+};
+
+window.addHotspotAction = function(interactionCard) {
+  const container = interactionCard.querySelector('.interaction-actions-container');
+  if (!container) return;
+
+  const count = container.querySelectorAll('.hs-action-card').length;
+  const data = window._roomFormData || {};
+
+  const html = renderHotspotActionRow({}, count, data);
+  container.insertAdjacentHTML('beforeend', html);
+};
+
+// ============================================
+// Type Change Handlers
+// ============================================
+
+window.handleInteractionTypeChange = function(select) {
+  const card = select.closest('.interaction-card');
+  const wrap = card.querySelector('.interaction-required-item-wrap');
+  const labelSpan = card.querySelector('.interaction-title');
+
+  if (select.value === 'use_item') {
+    wrap.style.display = '';
+  } else {
+    wrap.style.display = 'none';
+  }
+
+  // Update the interaction title label
+  if (labelSpan) {
+    const idx = card.dataset.interactionIndex;
+    const num = parseInt(idx) + 1;
+    labelSpan.textContent = `Interacción #${num} — ${INTERACTION_TYPE_LABELS[select.value] || select.value}`;
+  }
+};
+
+window.handleHsActionTypeChange = function(select) {
+  const card = select.closest('.hs-action-card');
+  const type = select.value;
+  const data = window._roomFormData || {};
+
+  const { targetHtml, valueHtml } = hsActionFieldsHtml(type, data, '', '');
+
+  // Update target and value fields
+  card.querySelector('.hs-action-target-wrap').innerHTML = targetHtml;
+  const valueWrap = card.querySelector('.hs-action-value-wrap');
+  valueWrap.innerHTML = valueHtml;
+  valueWrap.style.display = valueHtml ? '' : 'none';
+
+  // Update the action title label
+  const titleSpan = card.querySelector('.hs-action-title');
+  if (titleSpan) titleSpan.textContent = HS_ACTION_LABELS[type] || type;
+};
+
+// ============================================
+// Hotspot Listeners — name → slug auto-gen
+// ============================================
+
+function attachHotspotListeners() {
+  const container = document.getElementById('hotspots-container');
+  if (!container) return;
+  container.querySelectorAll('.hotspot-card').forEach((card, i) => {
+    attachSingleHotspotListeners(card, i);
+  });
+}
+
+function attachSingleHotspotListeners(card, index) {
+  const nameInput = card.querySelector('.hotspot-name');
+  const slugInput = card.querySelector('.hotspot-slug');
+  const titleSpan = card.querySelector('.hotspot-card-title');
+  const slugLabel = card.querySelector('.hotspot-slug-label');
+
+  if (nameInput && slugInput) {
+    nameInput.addEventListener('input', () => {
+      if (!slugInput.dataset.manual) {
+        slugInput.value = generateSlug('hotspot', nameInput.value);
+      }
+      if (titleSpan) titleSpan.textContent = nameInput.value || `Hotspot #${index + 1}`;
+      if (slugLabel) slugLabel.textContent = slugInput.value;
+    });
+    slugInput.addEventListener('input', () => {
+      slugInput.dataset.manual = '1';
+      if (slugLabel) slugLabel.textContent = slugInput.value;
+    });
+  }
+}
+
+// ============================================
+// Exit Row Render
+// ============================================
+
 function renderExitRow(exit = {}, rooms = [], flags = [], index = 0) {
-  // Resolve target room name for the title
   const targetRoom = rooms.find(r => r.id === exit.targetRoomId);
   const targetName = targetRoom ? targetRoom.name : '';
   const titleText = targetName
@@ -269,22 +843,6 @@ function renderExitRow(exit = {}, rooms = [], flags = [], index = 0) {
       </div>
     </div>
   `;
-}
-
-function collectExits() {
-  const container = document.getElementById('exits-container');
-  const items = container.querySelectorAll('.dynamic-array-item');
-  const exits = [];
-  items.forEach(item => {
-    const direction = item.querySelector('.exit-direction')?.value.trim() || '';
-    const selects = item.querySelectorAll('.form-select');
-    const targetRoomId = selects[0]?.value || '';
-    const conditionFlag = selects[1]?.value || '';
-    if (direction) {
-      exits.push({ direction, targetRoomId, conditionFlag });
-    }
-  });
-  return exits;
 }
 
 // ============================================
@@ -358,62 +916,6 @@ window.clearRoomImage = function() {
       <div class="image-upload-hint">JPG, PNG o GIF</div>
     `);
   }
-};
-
-// ============================================
-// Add Exit — fetches fresh data from DB
-// ============================================
-
-window.addExit = async function() {
-  const container = document.getElementById('exits-container');
-  if (!container) return;
-
-  const count = container.querySelectorAll('.dynamic-array-item').length;
-
-  // Try to get rooms/flags from the cached window data
-  // If empty (first exit on a new room), fetch fresh from DB
-  let roomsList = window._availableRooms || [];
-  let flagsList = window._availableFlags || [];
-
-  if (roomsList.length === 0) {
-    try {
-      const [allRooms, allFlags] = await Promise.all([
-        getAll('rooms'),
-        getAll('flags')
-      ]);
-      // Exclude current room
-      roomsList = allRooms.filter(r => r.id !== window._currentRoomId);
-      flagsList = allFlags;
-      window._availableRooms = roomsList;
-      window._availableFlags = flagsList;
-    } catch (err) {
-      console.error('Error fetching rooms/flags:', err);
-    }
-  }
-
-  const html = `
-    <div class="dynamic-array-item" data-exit-index="${count}">
-      <div class="dynamic-array-item-header">
-        <span class="dynamic-array-item-title">Salida #${count + 1}</span>
-        <button type="button" class="dynamic-array-remove" onclick="this.closest('.dynamic-array-item').remove()">&times;</button>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Dirección / Nombre</label>
-          <input type="text" class="form-input exit-direction" placeholder='Ej: "Puerta Amarilla"'>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Habitación Destino</label>
-          ${createSelect(roomsList, '', '— Seleccionar destino —')}
-        </div>
-      </div>
-      <div class="form-group" style="margin-bottom:0">
-        <label class="form-label">Condición (Flag)</label>
-        ${createSelect(flagsList, '', '— Sin condición (siempre accesible) —')}
-      </div>
-    </div>
-  `;
-  container.insertAdjacentHTML('beforeend', html);
 };
 
 // ============================================

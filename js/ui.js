@@ -70,7 +70,7 @@ export function setBreadcrumbs(items) {
   const container = document.getElementById('breadcrumbs');
   container.innerHTML = items.map((item, i) => {
     const isActive = i === items.length - 1;
-    const separator = i > 0 ? '<span class="breadcrumb-separator">&#9656;</span>' : '';
+    const separator = i > 0 ? '<span class="breadcrumb-separator"><i class="fa-solid fa-chevron-right" style="font-size:10px;"></i></span>' : '';
     return `${separator}<span class="breadcrumb-item ${isActive ? 'active' : ''}" ${item.route ? `data-nav="${item.route}"` : ''}>${item.label}</span>`;
   }).join('');
 

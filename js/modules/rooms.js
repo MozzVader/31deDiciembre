@@ -31,7 +31,7 @@ export async function renderRoomsList() {
         <button class="btn btn-primary" onclick="window.location.hash='rooms/new'">+ Nueva Habitación</button>
       </div>
       <div class="empty-state">
-        <div class="empty-state-icon">&#127968;</div>
+        <div class="empty-state-icon"><i class="fa-solid fa-house" style="font-size:48px;"></i></div>
         <div class="empty-state-title">No hay habitaciones todavía</div>
         <div class="empty-state-text">Creá la primera habitación de tu aventura. Cada habitación es un espacio donde el jugador puede explorar e interactuar.</div>
         <button class="btn btn-primary" onclick="window.location.hash='rooms/new'">+ Crear Habitación</button>
@@ -59,7 +59,7 @@ export async function renderRoomsList() {
     return `
     <div class="card" onclick="window.location.hash='rooms/${room.id}'">
       <div class="card-thumb">
-        ${room.imageUrl ? `<img src="${room.imageUrl}" alt="${escapeHtml(room.name)}">` : '&#127968;'}
+        ${room.imageUrl ? `<img src="${room.imageUrl}" alt="${escapeHtml(room.name)}">` : '<i class="fa-solid fa-house" style="font-size:28px;color:var(--text-muted);"></i>'}
       </div>
       <div class="card-title">${escapeHtml(room.name)}</div>
       <div class="card-description">${escapeHtml(room.description || 'Sin descripción')}</div>
@@ -120,7 +120,7 @@ export async function renderRoomForm(roomId = null) {
 
   renderWorkspace(`
     <div class="detail-header">
-      <button class="detail-back" onclick="window.location.hash='rooms'">&#9664; Volver</button>
+      <button class="detail-back" onclick="window.location.hash='rooms'"><i class="fa-solid fa-arrow-left"></i> Volver</button>
       <h1 class="detail-title">${isNew ? 'Nueva Habitación' : escapeHtml(room.name)}</h1>
     </div>
     <div class="form-container">
@@ -148,7 +148,7 @@ export async function renderRoomForm(roomId = null) {
             <input type="file" accept="image/*" id="room-image-file" onchange="window.handleRoomImage(event)">
             ${room?.imageUrl
               ? `<img src="${room.imageUrl}" class="image-preview" id="room-image-preview">`
-              : `<div class="image-upload-icon">&#128247;</div>
+              : `<div class="image-upload-icon"><i class="fa-solid fa-camera"></i></div>
                  <div class="image-upload-text">Subir imagen desde archivo</div>
                  <div class="image-upload-hint">JPG, PNG o GIF</div>`
             }
@@ -353,7 +353,7 @@ window.clearRoomImage = function() {
   const uploadDiv = document.getElementById('room-image-upload');
   if (uploadDiv && !uploadDiv.querySelector('.image-upload-icon')) {
     uploadDiv.insertAdjacentHTML('afterbegin', `
-      <div class="image-upload-icon">&#128247;</div>
+      <div class="image-upload-icon"><i class="fa-solid fa-camera"></i></div>
       <div class="image-upload-text">Subir imagen desde archivo</div>
       <div class="image-upload-hint">JPG, PNG o GIF</div>
     `);

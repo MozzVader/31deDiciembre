@@ -33,7 +33,7 @@ export async function renderDialoguesList() {
         <button class="btn btn-primary" onclick="window.location.hash='dialogues/new'">+ Nuevo Diálogo</button>
       </div>
       <div class="empty-state">
-        <div class="empty-state-icon">&#128172;</div>
+        <div class="empty-state-icon"><i class="fa-solid fa-comments" style="font-size:48px;"></i></div>
         <div class="empty-state-title">No hay diálogos todavía</div>
         <div class="empty-state-text">Acá va la chicha. Creá árboles de diálogo con nodos anidados — estilo Notion, sin caer en el infierno de canvas y flechitas.</div>
         <button class="btn btn-primary" onclick="window.location.hash='dialogues/new'">+ Crear Diálogo</button>
@@ -47,14 +47,14 @@ export async function renderDialoguesList() {
     return `
       <div class="card" onclick="window.location.hash='dialogues/${dlg.id}'">
         <div class="card-header">
-          <div style="font-size:28px;">&#128172;</div>
+          <div><i class="fa-solid fa-comments" style="font-size:28px;color:var(--accent);"></i></div>
           <div class="card-body">
             <div class="card-title">${escapeHtml(dlg.name)}</div>
             <div class="card-description">${escapeHtml(dlg.description || 'Sin descripción')}</div>
           </div>
         </div>
         <div class="card-meta">
-          <span class="card-badge">&#129489; ${escapeHtml(mainChar)}</span>
+          <span class="card-badge"><i class="fa-solid fa-user"></i> ${escapeHtml(mainChar)}</span>
           <span class="text-xs font-mono">${escapeHtml(dlg.slug || '')}</span>
         </div>
       </div>
@@ -103,7 +103,7 @@ export async function renderDialogueDetail(dialogueId) {
 
   renderWorkspace(`
     <div class="detail-header">
-      <button class="detail-back" onclick="window.location.hash='dialogues'">&#9664; Volver</button>
+      <button class="detail-back" onclick="window.location.hash='dialogues'"><i class="fa-solid fa-arrow-left"></i> Volver</button>
       <h1 class="detail-title">${escapeHtml(dialogue.name)}</h1>
       <div class="detail-actions">
         <button class="btn btn-ghost btn-sm" id="btn-edit-dialogue">Editar Info</button>
@@ -130,7 +130,7 @@ export async function renderDialogueDetail(dialogueId) {
     <div id="dialogue-tree">
       ${rootNodes.length === 0
         ? `<div class="empty-state" style="padding:40px;">
-             <div class="empty-state-icon">&#127795;</div>
+             <div class="empty-state-icon"><i class="fa-solid fa-tree" style="font-size:48px;"></i></div>
              <div class="empty-state-title">Árbol vacío</div>
              <div class="empty-state-text">Agregá un nodo raíz para empezar a construir este diálogo.</div>
              <button class="btn btn-primary" onclick="window.openNodeEditor('${dialogueId}', null)">+ Agregar Nodo Raíz</button>
@@ -171,7 +171,7 @@ function renderNodeTree(node, nodeMap, characters, flags, dialogueId) {
 
     return `
       <div class="dialogue-response" onclick="event.stopPropagation(); window.editNodeResponse('${resp.id || ''}')">
-        <span class="dialogue-response-arrow">&#10148;</span>
+        <span class="dialogue-response-arrow"><i class="fa-solid fa-arrow-right"></i></span>
         <span class="dialogue-response-text">"${escapeHtml(resp.text)}"</span>
         ${conditionHtml}
         <span class="text-xs text-muted">${escapeHtml(nextLabel)}${nextLabel !== 'Fin' ? '...' : ''}</span>
@@ -188,7 +188,7 @@ function renderNodeTree(node, nodeMap, characters, flags, dialogueId) {
     <div class="dialogue-node" data-node-id="${node.id}">
       <div class="dialogue-node-card" onclick="window.openNodeEditor('${dialogueId}', '${node.id}')" style="cursor:pointer;">
         <div class="dialogue-node-header">
-          <span class="dialogue-node-speaker">&#128483; ${escapeHtml(speakerName)}</span>
+          <span class="dialogue-node-speaker"><i class="fa-solid fa-microphone"></i> ${escapeHtml(speakerName)}</span>
           <span class="dialogue-node-id">${escapeHtml(nodeSlug || node.id.split('/').pop())}</span>
         </div>
         <div class="dialogue-node-text">"${escapeHtml(node.text || '')}"</div>
@@ -464,7 +464,7 @@ export async function renderDialogueForm(dialogueId = null) {
 
   renderWorkspace(`
     <div class="detail-header">
-      <button class="detail-back" onclick="window.location.hash='dialogues'">&#9664; Volver</button>
+      <button class="detail-back" onclick="window.location.hash='dialogues'"><i class="fa-solid fa-arrow-left"></i> Volver</button>
       <h1 class="detail-title">${isNew ? 'Nuevo Diálogo' : escapeHtml(dialogue.name)}</h1>
     </div>
     <div class="form-container" style="max-width:560px;">

@@ -9,6 +9,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <!-- Marked.js for Markdown rendering -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
@@ -19,7 +21,7 @@
   <!-- ============================================ -->
   <div class="auth-screen" id="auth-screen">
     <div class="auth-card">
-      <div class="auth-logo">&#127918;</div>
+      <div class="auth-logo"><i class="fa-solid fa-gamepad"></i></div>
       <h1 class="auth-title" id="auth-title">Iniciar Sesión</h1>
       <p class="auth-subtitle" id="auth-subtitle">Entrá a tu toolbox de diseño de aventuras</p>
 
@@ -62,7 +64,7 @@
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <div class="sidebar-project">
-          <div class="sidebar-project-icon">&#127918;</div>
+          <div class="sidebar-project-icon"><i class="fa-solid fa-gamepad"></i></div>
           <div class="sidebar-project-info">
             <div class="sidebar-project-name" id="project-name">31 de Diciembre</div>
             <div class="sidebar-project-type">Adventure Designer</div>
@@ -73,44 +75,44 @@
       <nav class="sidebar-nav">
         <div class="nav-section-label">Diseño</div>
         <div class="nav-item active" data-route="rooms">
-          <span class="nav-item-icon">&#128506;</span>
+          <span class="nav-item-icon"><i class="fa-solid fa-map"></i></span>
           Habitaciones
           <span class="nav-item-badge" id="badge-rooms">0</span>
         </div>
         <div class="nav-item" data-route="characters">
-          <span class="nav-item-icon">&#129489;&#8205;&#129489;&#8205;&#128101;</span>
+          <span class="nav-item-icon"><i class="fa-solid fa-users"></i></span>
           Personajes
           <span class="nav-item-badge" id="badge-characters">0</span>
         </div>
 
         <div class="nav-section-label">Mundo</div>
         <div class="nav-item" data-route="items">
-          <span class="nav-item-icon">&#127890;</span>
+          <span class="nav-item-icon"><i class="fa-solid fa-box-open"></i></span>
           Inventario & Flags
           <span class="nav-item-badge" id="badge-items">0</span>
         </div>
 
         <div class="nav-section-label">Historia</div>
         <div class="nav-item" data-route="timeline">
-          <span class="nav-item-icon">&#9201;&#65039;</span>
+          <span class="nav-item-icon"><i class="fa-solid fa-clock"></i></span>
           Cronología
           <span class="nav-item-badge" id="badge-timeline">0</span>
         </div>
         <div class="nav-item" data-route="dialogues">
-          <span class="nav-item-icon">&#128172;</span>
+          <span class="nav-item-icon"><i class="fa-solid fa-comments"></i></span>
           Diálogos
           <span class="nav-item-badge" id="badge-dialogues">0</span>
         </div>
 
         <div class="nav-section-label">Extras</div>
         <div class="nav-item" data-route="notes">
-          <span class="nav-item-icon">&#128221;</span>
+          <span class="nav-item-icon"><i class="fa-solid fa-note-sticky"></i></span>
           Notas Sueltas
         </div>
       </nav>
 
       <div class="sidebar-footer">
-        <button class="btn btn-ghost btn-sm w-full" id="btn-logout" style="margin-bottom:6px;">&#128682; Cerrar Sesión</button>
+        <button class="btn btn-ghost btn-sm w-full" id="btn-logout" style="margin-bottom:6px;"><i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión</button>
         <div class="sidebar-footer-text">v1.0 — Adventure Design Toolbox</div>
       </div>
     </aside>
@@ -124,7 +126,7 @@
         </div>
         <div class="topbar-actions" id="topbar-actions">
           <button class="btn btn-export" id="btn-export" title="Exportar diseño a JSON">
-            &#128230; Exportar JSON
+            <i class="fa-solid fa-file-export"></i> Exportar JSON
           </button>
         </div>
       </header>

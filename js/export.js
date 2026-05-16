@@ -174,7 +174,7 @@ export async function exportProject() {
     const body = `
       <div style="margin-bottom:12px;">
         <span class="text-xs text-muted">
-          &#128230; ${rooms.length} habitaciones, ${characters.length} personajes, ${items.length} items, ${flags.length} flags, ${events.length} triggers, ${dialogues.length} diálogos
+          <i class="fa-solid fa-box"></i> ${rooms.length} habitaciones, ${characters.length} personajes, ${items.length} items, ${flags.length} flags, ${events.length} triggers, ${dialogues.length} diálogos
         </span>
       </div>
       <div class="json-preview" id="json-preview-content">${highlighted}</div>
@@ -182,8 +182,8 @@ export async function exportProject() {
 
     const footer = `
       <button class="btn btn-ghost" onclick="closeModal()">Cerrar</button>
-      <button class="btn btn-primary" id="btn-download-json">&#128229; Descargar JSON</button>
-      <button class="btn btn-success" id="btn-copy-json">&#128203; Copiar al Portapapeles</button>
+      <button class="btn btn-primary" id="btn-download-json"><i class="fa-solid fa-download"></i> Descargar JSON</button>
+      <button class="btn btn-success" id="btn-copy-json"><i class="fa-solid fa-clipboard"></i> Copiar al Portapapeles</button>
     `;
 
     showModal('Exportar a JSON — Visionaire Bible', body, footer);

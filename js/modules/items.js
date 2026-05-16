@@ -54,8 +54,8 @@ async function renderTabs(activeTab = 'items') {
       </button>
     </div>
     <div class="tabs">
-      <button class="tab ${activeTab === 'items' ? 'active' : ''}" data-tab="items">&#127890; Items (${itemsCount})</button>
-      <button class="tab ${activeTab === 'flags' ? 'active' : ''}" data-tab="flags">&#127919; Flags (${flagsCount})</button>
+      <button class="tab ${activeTab === 'items' ? 'active' : ''}" data-tab="items"><i class="fa-solid fa-box-open"></i> Items (${itemsCount})</button>
+      <button class="tab ${activeTab === 'flags' ? 'active' : ''}" data-tab="flags"><i class="fa-solid fa-bullseye"></i> Flags (${flagsCount})</button>
     </div>
     <div id="tab-content">${contentHtml}</div>
   `);
@@ -83,7 +83,7 @@ async function renderItemsList(items) {
   if (items.length === 0) {
     return `
       <div class="empty-state">
-        <div class="empty-state-icon">&#127890;</div>
+        <div class="empty-state-icon"><i class="fa-solid fa-box-open" style="font-size:48px;"></i></div>
         <div class="empty-state-title">No hay items todavía</div>
         <div class="empty-state-text">Creá los objetos que el jugador puede encontrar, usar y combinar.</div>
       </div>
@@ -95,7 +95,7 @@ async function renderItemsList(items) {
       ${items.map(item => `
         <div class="card" onclick="window.location.hash='items/${item.id}'">
           <div class="card-header">
-            <div style="font-size:24px;">&#128230;</div>
+            <div><i class="fa-solid fa-box" style="font-size:24px;color:var(--accent);"></i></div>
             <div class="card-body">
               <div class="card-title">${escapeHtml(item.name)}</div>
               <div class="card-description">${escapeHtml(item.description || 'Sin descripción')}</div>
@@ -139,7 +139,7 @@ export async function renderItemForm(itemId = null) {
 
   renderWorkspace(`
     <div class="detail-header">
-      <button class="detail-back" onclick="window.location.hash='items'">&#9664; Volver</button>
+      <button class="detail-back" onclick="window.location.hash='items'"><i class="fa-solid fa-arrow-left"></i> Volver</button>
       <h1 class="detail-title">${isNew ? 'Nuevo Item' : escapeHtml(item.name)}</h1>
     </div>
     <div class="form-container">
@@ -370,7 +370,7 @@ function renderFlagsList(flags) {
   if (flags.length === 0) {
     return `
       <div class="empty-state">
-        <div class="empty-state-icon">&#127919;</div>
+        <div class="empty-state-icon"><i class="fa-solid fa-bullseye" style="font-size:48px;"></i></div>
         <div class="empty-state-title">No hay flags todavía</div>
         <div class="empty-state-text">Los flags son las condiciones que controlan tu juego. Ej: diego_tomo_cafe = true desbloquea un evento.</div>
       </div>
@@ -412,7 +412,7 @@ export async function renderFlagForm(flagId = null) {
 
   renderWorkspace(`
     <div class="detail-header">
-      <button class="detail-back" onclick="window.location.hash='items/flags'">&#9664; Volver</button>
+      <button class="detail-back" onclick="window.location.hash='items/flags'"><i class="fa-solid fa-arrow-left"></i> Volver</button>
       <h1 class="detail-title">${isNew ? 'Nuevo Flag' : escapeHtml(flag.name)}</h1>
     </div>
     <div class="form-container" style="max-width:480px;">

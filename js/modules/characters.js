@@ -29,7 +29,7 @@ export async function renderCharactersList() {
         <button class="btn btn-primary" onclick="window.location.hash='characters/new'">+ Nuevo Personaje</button>
       </div>
       <div class="empty-state">
-        <div class="empty-state-icon">&#129489;&#8205;&#129489;&#8205;&#128101;</div>
+        <div class="empty-state-icon"><i class="fa-solid fa-users" style="font-size:48px;"></i></div>
         <div class="empty-state-title">No hay personajes todavía</div>
         <div class="empty-state-text">Creá los personajes que van a interactuar con el jugador en tu aventura.</div>
         <button class="btn btn-primary" onclick="window.location.hash='characters/new'">+ Crear Personaje</button>
@@ -48,7 +48,7 @@ export async function renderCharactersList() {
       <div class="card" onclick="window.location.hash='characters/${char.id}'">
         <div class="card-header">
           <div class="card-avatar">
-            ${char.avatarUrl ? `<img src="${char.avatarUrl}" alt="${escapeHtml(char.name)}">` : '&#128100;'}
+            ${char.avatarUrl ? `<img src="${char.avatarUrl}" alt="${escapeHtml(char.name)}">` : '<i class="fa-solid fa-user" style="font-size:18px;color:var(--text-muted);"></i>'}
           </div>
           <div class="card-body">
             <div class="card-title">${escapeHtml(char.name)}</div>
@@ -103,7 +103,7 @@ export async function renderCharacterForm(charId = null) {
 
   renderWorkspace(`
     <div class="detail-header">
-      <button class="detail-back" onclick="window.location.hash='characters'">&#9664; Volver</button>
+      <button class="detail-back" onclick="window.location.hash='characters'"><i class="fa-solid fa-arrow-left"></i> Volver</button>
       <h1 class="detail-title">${isNew ? 'Nuevo Personaje' : escapeHtml(character.name)}</h1>
     </div>
     <div class="form-container">
@@ -150,7 +150,7 @@ export async function renderCharacterForm(charId = null) {
             <input type="file" accept="image/*" id="char-image-file" onchange="window.handleCharImage(event)">
             ${character?.avatarUrl
               ? `<img src="${character.avatarUrl}" class="image-preview" id="char-image-preview" style="${avatarStyle}">`
-              : `<div class="image-upload-icon">&#128100;</div>
+              : `<div class="image-upload-icon"><i class="fa-solid fa-user-plus"></i></div>
                  <div class="image-upload-text">Subir avatar del personaje</div>`
             }
           </div>
@@ -297,7 +297,7 @@ window.clearCharAvatar = function() {
   const uploadDiv = document.getElementById('char-image-upload');
   if (uploadDiv && !uploadDiv.querySelector('.image-upload-icon')) {
     uploadDiv.insertAdjacentHTML('afterbegin', `
-      <div class="image-upload-icon">&#128100;</div>
+      <div class="image-upload-icon"><i class="fa-solid fa-user-plus"></i></div>
       <div class="image-upload-text">Subir avatar del personaje</div>
     `);
   }

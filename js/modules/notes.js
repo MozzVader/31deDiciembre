@@ -8,9 +8,9 @@ let autoSaveTimer = null;
 
 const STATUS_CYCLE = ['nueva', 'en_progreso', 'completada'];
 const STATUS_LABELS = {
-  nueva: '\u{1F4C4} Nueva',
-  en_progreso: '\u{1F527} En progreso',
-  completada: '\u{2705} Completada'
+  nueva: '<i class="fa-solid fa-file"></i> Nueva',
+  en_progreso: '<i class="fa-solid fa-wrench"></i> En progreso',
+  completada: '<i class="fa-solid fa-circle-check"></i> Completada'
 };
 
 // Cambiar estado de una nota desde la card (click en badge)
@@ -36,7 +36,7 @@ export async function renderNotesList() {
         <button class="btn btn-primary" onclick="window.location.hash='notes/new'">+ Nueva Nota</button>
       </div>
       <div class="empty-state">
-        <div class="empty-state-icon">&#128221;</div>
+        <div class="empty-state-icon"><i class="fa-solid fa-pen-to-square" style="font-size:48px;"></i></div>
         <div class="empty-state-title">No hay notas todavía</div>
         <div class="empty-state-text">Un dump de ideas sin estructura. Markdown friendly. Para cuando te despiertás a las 3 AM con una idea genial.</div>
         <button class="btn btn-primary" onclick="window.location.hash='notes/new'">+ Crear Nota</button>
@@ -101,14 +101,14 @@ export async function renderNoteEditor(noteId = null) {
 
   renderWorkspace(`
     <div class="detail-header">
-      <button class="detail-back" onclick="window.location.hash='notes'">&#9664; Volver</button>
+      <button class="detail-back" onclick="window.location.hash='notes'"><i class="fa-solid fa-arrow-left"></i> Volver</button>
       <input type="text" class="form-input" id="note-title" placeholder="Título de la nota..." value="${escapeHtml(title)}" style="font-size:18px;font-weight:700;background:transparent;border:1px solid transparent;padding:4px 8px;max-width:400px;">
       <div class="detail-actions">
         <select id="note-status" class="form-select" style="font-size:12px;padding:4px 8px;border-radius:8px;">
           ${STATUS_CYCLE.map(s => `<option value="${s}" ${status === s ? 'selected' : ''}>${STATUS_LABELS[s]}</option>`).join('')}
         </select>
         <span class="text-xs text-muted" id="note-saved-status">Sin guardar</span>
-        <button class="btn btn-ghost btn-sm" id="btn-export-md" title="Descargar .md">&#128196; Export MD</button>
+        <button class="btn btn-ghost btn-sm" id="btn-export-md" title="Descargar .md"><i class="fa-solid fa-file-export"></i> Export MD</button>
         <button class="btn btn-ghost btn-sm" id="btn-save-note">Guardar</button>
         ${!isNew ? `<button class="btn btn-danger btn-sm" id="btn-delete-note">Eliminar</button>` : ''}
       </div>
@@ -125,16 +125,16 @@ export async function renderNoteEditor(noteId = null) {
           <button type="button" class="md-btn" data-action="italic" title="Cursiva"><i>I</i></button>
           <button type="button" class="md-btn" data-action="strike" title="Tachado"><s>S</s></button>
           <span class="md-sep"></span>
-          <button type="button" class="md-btn" data-action="ul" title="Lista desordenada">&#8226; Lista</button>
+          <button type="button" class="md-btn" data-action="ul" title="Lista desordenada"><i class="fa-solid fa-list-ul"></i></button>
           <button type="button" class="md-btn" data-action="ol" title="Lista ordenada">1. Lista</button>
-          <button type="button" class="md-btn" data-action="check" title="Tarea">&#9745; Tarea</button>
+          <button type="button" class="md-btn" data-action="check" title="Tarea"><i class="fa-solid fa-square-check"></i></button>
           <span class="md-sep"></span>
           <button type="button" class="md-btn" data-action="code" title="Código inline (backtick)">&lt;code&gt;</button>
-          <button type="button" class="md-btn" data-action="codeblock" title="Bloque de código (triple backtick)">&#128187; Bloque</button>
+          <button type="button" class="md-btn" data-action="codeblock" title="Bloque de código (triple backtick)"><i class="fa-solid fa-code"></i></button>
           <span class="md-sep"></span>
-          <button type="button" class="md-btn" data-action="link" title="Link">&#128279; Link</button>
-          <button type="button" class="md-btn" data-action="quote" title="Cita">&#8220; Cita</button>
-          <button type="button" class="md-btn" data-action="hr" title="Línea horizontal">&#8213; HR</button>
+          <button type="button" class="md-btn" data-action="link" title="Link"><i class="fa-solid fa-link"></i></button>
+          <button type="button" class="md-btn" data-action="quote" title="Cita"><i class="fa-solid fa-quote-left"></i></button>
+          <button type="button" class="md-btn" data-action="hr" title="Línea horizontal"><i class="fa-solid fa-minus"></i></button>
         </div>
         <textarea id="note-editor" placeholder="# Escribí acá...
 

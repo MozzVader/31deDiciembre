@@ -143,7 +143,7 @@ export async function renderTimelineList() {
         <button class="btn btn-primary" onclick="window.location.hash='timeline/new'">+ Nuevo Evento</button>
       </div>
       <div class="empty-state">
-        <div class="empty-state-icon">&#9201;&#65039;</div>
+        <div class="empty-state-icon"><i class="fa-solid fa-clock" style="font-size:48px;"></i></div>
         <div class="empty-state-title">No hay eventos en la línea temporal</div>
         <div class="empty-state-text">Los triggers controlan cuándo entran los personajes, cuándo cambian los flags y cuándo se desbloquean salidas. Son el motor de tu historia.</div>
         <button class="btn btn-primary" onclick="window.location.hash='timeline/new'">+ Crear Evento</button>
@@ -167,7 +167,7 @@ export async function renderTimelineList() {
     else if (cond.dialogueId) condTarget = dialogues.find(d => d.id === cond.dialogueId)?.name || cond.dialogueId;
 
     const actionsHtml = (event.actions || []).map(a => {
-      const icons = { 'MoveCharacter': '&#128694;', 'SetFlag': '&#127919;', 'UnlockExit': '&#128275;', 'GiveItem': '&#127890;', 'RemoveItem': '&#128465;', 'StartDialogue': '&#128172;' };
+      const icons = { 'MoveCharacter': '<i class="fa-solid fa-person-walking"></i>', 'SetFlag': '<i class="fa-solid fa-flag"></i>', 'UnlockExit': '<i class="fa-solid fa-lock-open"></i>', 'GiveItem': '<i class="fa-solid fa-hand-holding-heart"></i>', 'RemoveItem': '<i class="fa-solid fa-trash-can"></i>', 'StartDialogue': '<i class="fa-solid fa-comment"></i>' };
       let detail = '';
       if (a.type === 'StartDialogue') {
         const dlg = dialogues.find(d => (d.slug || d.id) === (a.dialogueId || a.target));
@@ -188,7 +188,7 @@ export async function renderTimelineList() {
       } else {
         detail = a.target || a.destination || '';
       }
-      return `<span>${icons[a.type] || '&#9881;'} ${escapeHtml(a.type)}: ${escapeHtml(detail)}</span>`;
+      return `<span>${icons[a.type] || '<i class="fa-solid fa-gear"></i>'} ${escapeHtml(a.type)}: ${escapeHtml(detail)}</span>`;
     }).join('');
 
     return `
@@ -260,7 +260,7 @@ export async function renderTimelineForm(eventId = null) {
 
   renderWorkspace(`
     <div class="detail-header">
-      <button class="detail-back" onclick="window.location.hash='timeline'">&#9664; Volver</button>
+      <button class="detail-back" onclick="window.location.hash='timeline'"><i class="fa-solid fa-arrow-left"></i> Volver</button>
       <h1 class="detail-title">${isNew ? 'Nuevo Evento' : escapeHtml(event.eventName)}</h1>
     </div>
     <div class="form-container">

@@ -99,7 +99,7 @@ export async function renderDialogueDetail(dialogueId) {
   nodes.forEach(n => { nodeMap[n.id] = { ...n, children: [], responses: n.playerResponses || [] }; });
   const rootNodes = nodes.filter(n => !n.parentNodeId);
 
-  const treeHtml = rootNodes.map(node => renderNodeTree(node, nodeMap, characters, flags)).join('');
+  const treeHtml = rootNodes.map(node => renderNodeTree(node, nodeMap, characters, flags, dialogueId)).join('');
 
   renderWorkspace(`
     <div class="detail-header">
@@ -157,7 +157,7 @@ export async function renderDialogueDetail(dialogueId) {
   };
 }
 
-function renderNodeTree(node, nodeMap, characters, flags) {
+function renderNodeTree(node, nodeMap, characters, flags, dialogueId) {
   const speaker = characters.find(c => c.id === node.speakerId);
   const speakerName = speaker?.name || (node.speakerId === '__player__' ? 'Jugador' : node.speakerId || '?');
 
@@ -181,12 +181,12 @@ function renderNodeTree(node, nodeMap, characters, flags) {
 
   // Find children (nodes whose parentNodeId is this node)
   const children = (node.children || []);
-  const childrenHtml = children.map(child => renderNodeTree(child, nodeMap, characters, flags)).join('');
+  const childrenHtml = children.map(child => renderNodeTree(child, nodeMap, characters, flags, dialogueId)).join('');
 
   const nodeSlug = node.slug || '';
   return `
     <div class="dialogue-node" data-node-id="${node.id}">
-      <div class="dialogue-node-card" onclick="window.openNodeEditor('${node.id.split('/')[0]}', '${node.id}')" style="cursor:pointer;">
+      <div class="dialogue-node-card" onclick="window.openNodeEditor('${dialogueId}', '${node.id}')" style="cursor:pointer;">
         <div class="dialogue-node-header">
           <span class="dialogue-node-speaker">&#128483; ${escapeHtml(speakerName)}</span>
           <span class="dialogue-node-id">${escapeHtml(nodeSlug || node.id.split('/').pop())}</span>
@@ -314,6 +314,11 @@ window.openNodeEditor = async function(dialogueId, nodeId) {
   const nodeTextInput = document.getElementById('node-editor-text');
   if (!isNew && nodeSlugInput.value) {
     nodeSlugInput.dataset.manual = '1'; // don't overwrite existing slug
+  } else if (!isNew && !nodeSlugInput.value && nodeTextInput.value) {
+    // Pre-populate slug from existing text for nodes that don't have a slug yet
+    const words = nodeTextInput.value.trim().split(/\s+/).slice(0, 5).join(' ');
+    nodeSlugInput.value = generateSlug('node', words);
+    nodeSlugInput.dataset.manual = '1';
   }
   nodeTextInput.addEventListener('input', () => {
     if (!nodeSlugInput.dataset.manual) {

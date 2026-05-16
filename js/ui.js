@@ -22,6 +22,12 @@ export function showModal(title, bodyHtml, footerHtml = '') {
   document.getElementById('modal-body').innerHTML = bodyHtml;
   document.getElementById('modal-footer').innerHTML = footerHtml;
   document.getElementById('modal-overlay').classList.add('visible');
+
+  // Attach close handler to the × button (in case it was removed/re-added)
+  const closeBtn = document.getElementById('modal-close');
+  if (closeBtn) {
+    closeBtn.onclick = closeModal;
+  }
 }
 
 /**
@@ -30,6 +36,9 @@ export function showModal(title, bodyHtml, footerHtml = '') {
 export function closeModal() {
   document.getElementById('modal-overlay').classList.remove('visible');
 }
+
+// Expose on window for inline onclick handlers in HTML templates
+window.closeModal = closeModal;
 
 /**
  * Confirm dialog (modal-based)

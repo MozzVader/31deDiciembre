@@ -128,8 +128,8 @@ export async function renderNoteEditor(noteId = null) {
           <button type="button" class="md-btn" data-action="ol" title="Lista ordenada">1. Lista</button>
           <button type="button" class="md-btn" data-action="check" title="Tarea">&#9745; Tarea</button>
           <span class="md-sep"></span>
-          <button type="button" class="md-btn" data-action="code" title="Código inline"><code>&lt;/&gt;</code></button>
-          <button type="button" class="md-btn" data-action="codeblock" title="Bloque de código">&#123;&#125; Bloque</button>
+          <button type="button" class="md-btn" data-action="code" title="Código inline (backtick)">&lt;code&gt;</button>
+          <button type="button" class="md-btn" data-action="codeblock" title="Bloque de código (triple backtick)">&#128187; Bloque</button>
           <span class="md-sep"></span>
           <button type="button" class="md-btn" data-action="link" title="Link">&#128279; Link</button>
           <button type="button" class="md-btn" data-action="quote" title="Cita">&#8220; Cita</button>
@@ -203,9 +203,24 @@ export async function renderNoteEditor(noteId = null) {
       case 'code':
         insertion = wrapSelection(sel || 'codigo', '`', '`');
         cursorOffset = sel ? insertion.length : 1; break;
-      case 'codeblock':
-        insertion = '\n```\n' + (sel || 'código') + '\n```\n';
-        cursorOffset = sel ? 4 : 4; break;
+      case 'codeblock': {
+        if (sel) {
+          // Hay texto seleccionado: envolver en bloque
+          insertion = '\n```\n' + sel + '\n```\n';
+          editor.selectionStart = start + 4; // después de ```\n
+          editor.selectionEnd = start + 4 + sel.length;
+        } else {
+          // Sin selección: abrir bloque con placeholder de lenguaje
+          insertion = '\n```lang\n\n```\n';
+          // Seleccionar "lang" para que el usuario escriba el nombre o lo borre
+          const langStart = before.length + 4; // después de \n```
+          editor.selectionStart = langStart;
+          editor.selectionEnd = langStart + 3; // "lang"
+        }
+        editor.value = before + insertion + after;
+        editor.dispatchEvent(new Event('input'));
+        return;
+      }
       case 'link':
         insertion = '[' + (sel || 'texto') + '](url)';
         cursorOffset = sel ? insertion.length - 1 : 1; break;
@@ -219,23 +234,21 @@ export async function renderNoteEditor(noteId = null) {
     editor.value = before + insertion + after;
 
     // Restore selection
-    if (cursorOffset > 0 && sel) {
+    if (sel) {
+      // Si había selección, seleccionar todo el texto insertado
       editor.selectionStart = start;
       editor.selectionEnd = start + insertion.length;
-    } else if (!sel) {
-      // Select placeholder text so user can type over it
-      const placeholderStart = before.length + insertion.indexOf(sel || 'negrita' || 'cursiva' || 'codigo' || 'texto' || 'tachado');
-      // Find the placeholder in insertion
+    } else {
+      // Sin selección: buscar placeholder y seleccionarlo para que el usuario escriba
       const phMatch = insertion.match(/(negrita|cursiva|tachado|codigo|texto)/);
       if (phMatch) {
         const phStart = before.length + insertion.indexOf(phMatch[1]);
         editor.selectionStart = phStart;
         editor.selectionEnd = phStart + phMatch[1].length;
       } else {
+        // Sin placeholder (headings, listas, hr): cursor al final
         editor.selectionStart = editor.selectionEnd = start + insertion.length;
       }
-    } else {
-      editor.selectionStart = editor.selectionEnd = start + insertion.length;
     }
 
     // Trigger preview update

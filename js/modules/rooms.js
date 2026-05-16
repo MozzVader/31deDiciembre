@@ -325,7 +325,7 @@ function renderHotspotCard(hotspot, index, data) {
   const itemOpts = data.items.map(i => ({ id: i.slug || i.id, name: i.name }));
 
   return `
-    <div class="hotspot-card" data-hotspot-index="${index}">
+    <div class="hotspot-card collapsed" data-hotspot-index="${index}">
       <div class="hotspot-card-header" onclick="this.closest('.hotspot-card').classList.toggle('collapsed')">
         <div class="hotspot-card-header-left">
           <i class="fa-solid fa-crosshairs hotspot-icon"></i>
@@ -758,6 +758,17 @@ window.addHotspotAction = function(interactionCard) {
 
   const html = renderHotspotActionRow({}, count, data);
   container.insertAdjacentHTML('beforeend', html);
+
+  // Attach dialogue node loading for new StartDialogue actions
+  const newCard = container.querySelector(`.hs-action-card[data-hs-action-index="${count}"]`);
+  if (newCard) {
+    const type = newCard.querySelector('.hs-action-type')?.value;
+    if (type === 'StartDialogue') {
+      newCard.querySelector('.hs-action-target')?.addEventListener('change', function() {
+        window.loadHsDialogueNodes(newCard, this.value);
+      });
+    }
+  }
 };
 
 // ============================================

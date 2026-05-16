@@ -626,6 +626,17 @@ window.addItemAction = function(interactionCard) {
   const data = window._itemFormData || {};
   const html = renderItemActionRow({}, count, data);
   container.insertAdjacentHTML('beforeend', html);
+
+  // Attach dialogue node loading for new StartDialogue actions
+  const newCard = container.querySelector(`.hs-action-card[data-item-action-index="${count}"]`);
+  if (newCard) {
+    const type = newCard.querySelector('.item-action-type')?.value;
+    if (type === 'StartDialogue') {
+      newCard.querySelector('.item-action-target')?.addEventListener('change', function() {
+        window.loadItemDialogueNodes(newCard, this.value);
+      });
+    }
+  }
 };
 
 window.handleItemInteractionTypeChange = function(select) {

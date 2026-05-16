@@ -81,7 +81,8 @@ export async function exportProject() {
         const combos = (item.combinations || []).map(c => ({
           withItemSlug: itemSlugMap[c.withItemSlug] || itemSlugMap[c.combineWithItemId] || c.withItemSlug || null,
           resultItemSlug: itemSlugMap[c.resultItemSlug] || itemSlugMap[c.resultItemId] || c.resultItemSlug || null,
-          consumesOtherItem: c.consumesOtherItem ?? true,
+          consumesSelf: c.consumesSelf ?? false,
+          consumesTarget: c.consumesTarget ?? true,
           resultDialogueSlug: c.resultDialogueSlug || null
         })).filter(c => c.withItemSlug);
 

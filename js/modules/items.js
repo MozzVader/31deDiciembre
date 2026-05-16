@@ -253,10 +253,20 @@ function renderComboRow(combo = {}, items = [], dialogues = [], index = 0) {
       <div class="form-row">
         <div class="form-group">
           <label class="form-checkbox">
-            <input type="checkbox" class="combo-consumes" ${combo.consumesOtherItem ? 'checked' : ''}>
-            <span class="form-checkbox-label">Se consume el otro item</span>
+            <input type="checkbox" class="combo-consumes-self" ${combo.consumesSelf ? 'checked' : ''}>
+            <span class="form-checkbox-label">Se consume este item (self)</span>
           </label>
+          <div class="form-hint">El item que tiene esta receta desaparece del inventario.</div>
         </div>
+        <div class="form-group">
+          <label class="form-checkbox">
+            <input type="checkbox" class="combo-consumes-target" ${combo.consumesTarget ? 'checked' : ''}>
+            <span class="form-checkbox-label">Se consume el otro item (target)</span>
+          </label>
+          <div class="form-hint">El item con el que se combina desaparece del inventario.</div>
+        </div>
+      </div>
+      <div class="form-row">
         <div class="form-group">
           <label class="form-label">Diálogo al combinar</label>
           ${createSelect(dialogues, combo.resultDialogueSlug || '', '— Opcional —')}
@@ -275,9 +285,10 @@ function collectCombos() {
     const withItemSlug = selects[0]?.value || '';
     const resultItemSlug = selects[1]?.value || '';
     const resultDialogueSlug = selects[2]?.value || '';
-    const consumesOtherItem = item.querySelector('.combo-consumes')?.checked || false;
+    const consumesSelf = item.querySelector('.combo-consumes-self')?.checked || false;
+    const consumesTarget = item.querySelector('.combo-consumes-target')?.checked || false;
     if (withItemSlug) {
-      combos.push({ withItemSlug, resultItemSlug, consumesOtherItem, resultDialogueSlug });
+      combos.push({ withItemSlug, resultItemSlug, consumesSelf, consumesTarget, resultDialogueSlug });
     }
   });
   return combos;
@@ -327,10 +338,20 @@ window.addCombo = async function() {
       <div class="form-row">
         <div class="form-group">
           <label class="form-checkbox">
-            <input type="checkbox" class="combo-consumes" checked>
-            <span class="form-checkbox-label">Se consume el otro item</span>
+            <input type="checkbox" class="combo-consumes-self">
+            <span class="form-checkbox-label">Se consume este item (self)</span>
           </label>
+          <div class="form-hint">El item que tiene esta receta desaparece del inventario.</div>
         </div>
+        <div class="form-group">
+          <label class="form-checkbox">
+            <input type="checkbox" class="combo-consumes-target" checked>
+            <span class="form-checkbox-label">Se consume el otro item (target)</span>
+          </label>
+          <div class="form-hint">El item con el que se combina desaparece del inventario.</div>
+        </div>
+      </div>
+      <div class="form-row">
         <div class="form-group">
           <label class="form-label">Diálogo al combinar</label>
           ${createSelect(dialoguesList, '', '— Opcional —')}

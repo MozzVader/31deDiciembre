@@ -16,7 +16,7 @@ import {
   orderBy,
   serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import { firebaseConfig, PROJECT_ID } from './config.js';
 
 // Initialize Firebase
@@ -24,20 +24,41 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-// Promise that resolves when auth is ready
+// Track auth state — resolves when a user is logged in
+let currentUser = null;
+let authResolver = null;
 let authReady = new Promise((resolve) => {
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      resolve(user);
-    } else {
-      signInAnonymously(auth).then(resolve).catch(console.error);
-    }
-  });
+  authResolver = resolve;
+});
+
+// Listen for auth state changes (driven by auth.js module)
+onAuthStateChanged(auth, (user) => {
+  currentUser = user;
+  if (user) {
+    authResolver(user);
+  }
 });
 
 // Wait for auth before any DB operation
 export async function ensureAuth() {
-  return authReady;
+  await authReady;
+  if (!currentUser) {
+    throw new Error('No autenticado. Iniciá sesión para continuar.');
+  }
+  return currentUser;
+}
+
+// Get current user
+export function getCurrentUser() {
+  return currentUser;
+}
+
+// Reset auth state (for logout)
+export function resetAuth() {
+  currentUser = null;
+  authReady = new Promise((resolve) => {
+    authResolver = resolve;
+  });
 }
 
 // Helper: get the project document reference
@@ -194,5 +215,5 @@ export function generateId(prefix = '') {
   return prefix ? `${prefix}_${id}` : id;
 }
 
-// Export db instance for advanced usage
-export { db };
+// Export db and auth instances for advanced usage
+export { db, auth };

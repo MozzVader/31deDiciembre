@@ -10,6 +10,42 @@ import { renderDialoguesList, renderDialogueDetail, renderDialogueForm } from '.
 import { renderNotesList, renderNoteEditor } from './modules/notes.js';
 import { exportProject } from './export.js';
 import { setActiveNav, closeModal } from './ui.js';
+import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { auth } from './db.js';
+import { showAuth, hideAuth, setupLogout } from './auth.js';
+
+// ============================================
+// Auth State Management
+// ============================================
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    // User is logged in — show app
+    hideAuth();
+    // Show user email in topbar
+    updateUserDisplay(user);
+    // Initialize router only after first auth
+    if (!window._routerInitialized) {
+      window._routerInitialized = true;
+      initRouter();
+    }
+  } else {
+    // No user — show login
+    showAuth();
+  }
+});
+
+function updateUserDisplay(user) {
+  let userEl = document.getElementById('topbar-user');
+  if (!userEl) {
+    // Insert user info into topbar actions
+    const topbarActions = document.getElementById('topbar-actions');
+    userEl = document.createElement('div');
+    userEl.id = 'topbar-user';
+    userEl.className = 'topbar-user';
+    topbarActions.insertBefore(userEl, topbarActions.firstChild);
+  }
+  userEl.innerHTML = `<span class="topbar-user-email" title="${user.email}">${user.email}</span>`;
+}
 
 // ============================================
 // Register Routes
@@ -159,6 +195,11 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ============================================
-// Initialize
+// Logout
 // ============================================
-initRouter();
+setupLogout();
+
+// ============================================
+// NOTE: Router initializes AFTER auth check
+// (see onAuthStateChanged above)
+// ============================================

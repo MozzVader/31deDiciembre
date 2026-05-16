@@ -10,13 +10,53 @@
   <link rel="stylesheet" href="css/styles.css">
   <!-- Marked.js for Markdown rendering -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <!-- Firebase SDK (Modular) -->
-  <script type="module">
-    // Firebase will be initialized in js/config.js and js/db.js
-  </script>
 </head>
 <body>
-  <div id="app">
+
+  <!-- ============================================ -->
+  <!-- AUTH SCREEN -->
+  <!-- ============================================ -->
+  <div class="auth-screen" id="auth-screen">
+    <div class="auth-card">
+      <div class="auth-logo">&#127918;</div>
+      <h1 class="auth-title" id="auth-title">Iniciar Sesión</h1>
+      <p class="auth-subtitle" id="auth-subtitle">Entrá a tu toolbox de diseño de aventuras</p>
+
+      <form id="auth-form" autocomplete="on">
+        <div class="form-group" id="auth-name-group" style="display:none;">
+          <label class="form-label">Nombre</label>
+          <input type="text" class="form-input" id="auth-name" placeholder="Tu nombre" autocomplete="name">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" class="form-input" id="auth-email" placeholder="tu@email.com" autocomplete="email" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Contraseña</label>
+          <input type="password" class="form-input" id="auth-password" placeholder="Mínimo 6 caracteres" autocomplete="${window.location.pathname.includes('register') ? 'new-password' : 'current-password'}" required>
+        </div>
+
+        <div class="auth-error" id="auth-error"></div>
+
+        <button type="submit" class="btn btn-primary btn-lg w-full" id="auth-submit">Entrar</button>
+
+        <div class="auth-footer">
+          <a href="#" id="auth-forgot" class="auth-link">Olvidé mi contraseña</a>
+          <div class="auth-toggle-row">
+            <span id="auth-toggle-text">¿No tenés cuenta?</span>
+            <a href="#" id="auth-toggle" class="auth-link">Registrate</a>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- APP (hidden until authenticated) -->
+  <!-- ============================================ -->
+  <div id="app" style="display:none;">
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
@@ -69,6 +109,7 @@
       </nav>
 
       <div class="sidebar-footer">
+        <button class="btn btn-ghost btn-sm w-full" id="btn-logout" style="margin-bottom:6px;">&#128682; Cerrar Sesión</button>
         <div class="sidebar-footer-text">v1.0 — Adventure Design Toolbox</div>
       </div>
     </aside>

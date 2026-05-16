@@ -55,13 +55,7 @@ function updateUserDisplay(user) {
 registerRoute('rooms', ({ action }) => {
   if (action === 'new') {
     renderRoomForm(null);
-  } else {
-    renderRoomsList();
-  }
-});
-registerRoute('rooms/new', () => renderRoomForm(null));
-registerRoute('rooms/:id', ({ action }) => {
-  if (action && action !== 'new') {
+  } else if (action) {
     renderRoomForm(action);
   } else {
     renderRoomsList();
@@ -72,13 +66,7 @@ registerRoute('rooms/:id', ({ action }) => {
 registerRoute('characters', ({ action }) => {
   if (action === 'new') {
     renderCharacterForm(null);
-  } else {
-    renderCharactersList();
-  }
-});
-registerRoute('characters/new', () => renderCharacterForm(null));
-registerRoute('characters/:id', ({ action }) => {
-  if (action && action !== 'new') {
+  } else if (action) {
     renderCharacterForm(action);
   } else {
     renderCharactersList();
@@ -103,29 +91,12 @@ registerRoute('items', ({ action, subaction }) => {
     renderItemsView();
   }
 });
-registerRoute('items/new', () => renderItemForm(null));
-registerRoute('items/flags', () => renderFlagsView());
-registerRoute('items/flags/new', () => renderFlagForm(null));
-registerRoute('items/flags/:id', ({ subaction }) => {
-  if (subaction) renderFlagForm(subaction);
-});
-registerRoute('items/:id', ({ action }) => {
-  if (action && action !== 'new' && action !== 'flags') {
-    renderItemForm(action);
-  }
-});
 
 // Timeline
 registerRoute('timeline', ({ action }) => {
   if (action === 'new') {
     renderTimelineForm(null);
-  } else {
-    renderTimelineList();
-  }
-});
-registerRoute('timeline/new', () => renderTimelineForm(null));
-registerRoute('timeline/:id', ({ action }) => {
-  if (action && action !== 'new') {
+  } else if (action) {
     renderTimelineForm(action);
   } else {
     renderTimelineList();
@@ -136,13 +107,7 @@ registerRoute('timeline/:id', ({ action }) => {
 registerRoute('dialogues', ({ action }) => {
   if (action === 'new') {
     renderDialogueForm(null);
-  } else {
-    renderDialoguesList();
-  }
-});
-registerRoute('dialogues/new', () => renderDialogueForm(null));
-registerRoute('dialogues/:id', ({ action }) => {
-  if (action && action !== 'new') {
+  } else if (action) {
     renderDialogueDetail(action);
   } else {
     renderDialoguesList();
@@ -153,13 +118,7 @@ registerRoute('dialogues/:id', ({ action }) => {
 registerRoute('notes', ({ action }) => {
   if (action === 'new') {
     renderNoteEditor(null);
-  } else {
-    renderNotesList();
-  }
-});
-registerRoute('notes/new', () => renderNoteEditor(null));
-registerRoute('notes/:id', ({ action }) => {
-  if (action && action !== 'new') {
+  } else if (action) {
     renderNoteEditor(action);
   } else {
     renderNotesList();

@@ -125,6 +125,10 @@ export async function renderItemForm(itemId = null) {
   const flags = await getAll('flags');
   const combinations = item?.combinations || [];
 
+  // Store on window for addCombo()
+  window._availableComboItems = allItems;
+  window._availableComboFlags = flags;
+
   renderWorkspace(`
     <div class="detail-header">
       <button class="detail-back" onclick="window.location.hash='items'">&#9664; Volver</button>
@@ -261,13 +265,30 @@ function collectCombos() {
   return combos;
 }
 
-window.addCombo = function() {
+window.addCombo = async function() {
   const container = document.getElementById('combinations-container');
+  if (!container) return;
+
   const count = container.querySelectorAll('.dynamic-array-item').length;
-  const lastItem = container.querySelector('.dynamic-array-item:last-child');
-  const s0 = lastItem?.querySelectorAll('.form-select')[0]?.innerHTML || '';
-  const s1 = lastItem?.querySelectorAll('.form-select')[1]?.innerHTML || '';
-  const s2 = lastItem?.querySelectorAll('.form-select')[2]?.innerHTML || '';
+
+  // Try cached data first; fetch from DB if empty
+  let itemsList = window._availableComboItems || [];
+  let flagsList = window._availableComboFlags || [];
+
+  if (itemsList.length === 0) {
+    try {
+      const [allItems, allFlags] = await Promise.all([
+        getAll('items'),
+        getAll('flags')
+      ]);
+      itemsList = allItems;
+      flagsList = allFlags;
+      window._availableComboItems = itemsList;
+      window._availableComboFlags = flagsList;
+    } catch (err) {
+      console.error('Error fetching items/flags:', err);
+    }
+  }
 
   const html = `
     <div class="dynamic-array-item" data-combo-index="${count}">
@@ -278,16 +299,16 @@ window.addCombo = function() {
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Combinar con</label>
-          <select class="form-select">${s0}</select>
+          ${createSelect(itemsList, '', '— Item —')}
         </div>
         <div class="form-group">
           <label class="form-label">Resultado (Item)</label>
-          <select class="form-select">${s1}</select>
+          ${createSelect(itemsList, '', '— Item resultado —')}
         </div>
       </div>
       <div class="form-group" style="margin-bottom:0">
         <label class="form-label">Flag al combinar</label>
-        <select class="form-select">${s2}</select>
+        ${createSelect(flagsList, '', '— Flag resultado (opcional) —')}
       </div>
     </div>
   `;

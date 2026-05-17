@@ -1834,6 +1834,7 @@ a:hover {
 /* ---------- Quick Create Button ---------- */
 .quick-create-wrap {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   align-items: flex-start;
 }
@@ -1861,4 +1862,42 @@ a:hover {
   border-color: var(--primary);
   color: var(--primary);
   background: rgba(99, 102, 241, 0.06);
+}
+
+/* ---------- Filterable Select ---------- */
+.filter-select-input {
+  flex: 0 0 100%;
+  font-size: 13px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.filter-select-input:focus {
+  border-color: var(--primary);
+}
+
+.filter-select-input::placeholder {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.quick-create-wrap > .form-select {
+  flex: 1;
+  min-width: 0;
+}
+
+.filter-select-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.filter-select-wrap > .form-select {
+  flex: 1;
+  min-width: 0;
 }

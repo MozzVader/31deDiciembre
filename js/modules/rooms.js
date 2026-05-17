@@ -15,9 +15,11 @@ function generateSlug(prefix, name) {
 }
 
 /** createSelect with optional extra CSS class */
-function sel(items, selected, placeholder, extraClass) {
-  const html = createSelect(items, selected, placeholder);
-  return extraClass ? html.replace('class="form-select"', `class="form-select ${extraClass}"`) : html;
+function sel(items, selected, placeholder, extraClass, filterable = false) {
+  const html = createSelect(items, selected, placeholder, filterable);
+  if (!extraClass) return html;
+  // Add extra class to the <select> — works whether or not data-filterable is present
+  return html.replace('<select class="form-select"', `<select class="form-select ${extraClass}"`);
 }
 
 /** Get current hotspot options from the form DOM */
@@ -356,7 +358,10 @@ function renderHotspotCard(hotspot, index, data) {
 
         <div class="form-group">
           <label class="form-label">Item Conectado (opcional)</label>
-          ${sel(itemOpts, hotspot.connectedItemSlug || '', '— Ninguno —', 'hotspot-connected-item')}
+          <div class="quick-create-wrap">
+            ${sel(itemOpts, hotspot.connectedItemSlug || '', '— Ninguno —', 'hotspot-connected-item', true)}
+            ${quickCreateBtn('item')}
+          </div>
           <div class="form-hint">Si al interactuar con este hotspot se agrega un item al inventario, conectalo acá. Te ayuda a mantener la traza: "este hotspot de la mesa está conectado al item Vaso de mi base de datos".</div>
         </div>
 
@@ -422,7 +427,7 @@ function renderInteractionRow(interaction, index, data) {
           <div class="form-group interaction-required-item-wrap" style="${type !== 'use_item' ? 'display:none' : ''}">
             <label class="form-label">Item Requerido</label>
             <div class="quick-create-wrap">
-              ${sel(itemOpts, interaction.requiredItemSlug || '', '— Seleccionar item —', 'interaction-required-item')}
+              ${sel(itemOpts, interaction.requiredItemSlug || '', '— Seleccionar item —', 'interaction-required-item', true)}
               ${quickCreateBtn('item')}
             </div>
             <div class="form-hint">El item del inventario que el jugador necesita usar sobre este hotspot.</div>
@@ -432,7 +437,7 @@ function renderInteractionRow(interaction, index, data) {
         <div class="form-group">
           <label class="form-label">Condición (Flag)</label>
           <div class="quick-create-wrap">
-            ${sel(flagOpts, interaction.conditionSlug || '', '— Sin condición (siempre accesible) —', 'interaction-condition')}
+            ${sel(flagOpts, interaction.conditionSlug || '', '— Sin condición (siempre accesible) —', 'interaction-condition', true)}
             ${quickCreateBtn('flag')}
           </div>
           <div class="form-hint">La interacción solo está disponible si este flag está activo.</div>
@@ -529,12 +534,15 @@ function hsActionFieldsHtml(type, data, targetVal, valueVal) {
       const dlgOpts = data.dialogues.map(d => ({ id: d.slug || d.id, name: d.name }));
       targetHtml = `<label class="form-label">Diálogo</label>
         <div class="quick-create-wrap">
-          ${sel(dlgOpts, targetVal, '— Seleccionar diálogo —', 'hs-action-target')}
+          ${sel(dlgOpts, targetVal, '— Seleccionar diálogo —', 'hs-action-target', true)}
           ${quickCreateBtn('dialogue')}
         </div>
         <div class="form-hint">Al seleccionar un diálogo se cargan sus nodos abajo.</div>`;
       valueHtml = `<label class="form-label">Nodo Inicial (opcional)</label>
-        <select class="form-select hs-action-node" data-saved-node="${escapeHtml(valueVal || '')}"><option value="">— (arranca desde el primer nodo) —</option></select>
+        <div class="quick-create-wrap">
+          <select class="form-select hs-action-node" data-saved-node="${escapeHtml(valueVal || '')}" data-filterable><option value="">— (arranca desde el primer nodo) —</option></select>
+          ${quickCreateBtn('node')}
+        </div>
         <div class="form-hint">Dejá vacío para arrancar desde el primer nodo.</div>`;
       break;
     }
@@ -543,7 +551,7 @@ function hsActionFieldsHtml(type, data, targetVal, valueVal) {
       const itemOpts = data.items.map(i => ({ id: i.slug || i.id, name: i.name }));
       targetHtml = `<label class="form-label">Item</label>
         <div class="quick-create-wrap">
-          ${sel(itemOpts, targetVal, '— Seleccionar item —', 'hs-action-target')}
+          ${sel(itemOpts, targetVal, '— Seleccionar item —', 'hs-action-target', true)}
           ${quickCreateBtn('item')}
         </div>`;
       break;
@@ -552,7 +560,7 @@ function hsActionFieldsHtml(type, data, targetVal, valueVal) {
       const flagOpts = data.flags.map(f => ({ id: f.name, name: f.name }));
       targetHtml = `<label class="form-label">Flag</label>
         <div class="quick-create-wrap">
-          ${sel(flagOpts, targetVal, '— Seleccionar flag —', 'hs-action-target')}
+          ${sel(flagOpts, targetVal, '— Seleccionar flag —', 'hs-action-target', true)}
           ${quickCreateBtn('flag')}
         </div>`;
       valueHtml = `<label class="form-label">Valor</label>

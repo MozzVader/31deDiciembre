@@ -90,6 +90,7 @@ export function renderWorkspace(html) {
   const workspace = document.getElementById('workspace');
   workspace.innerHTML = html;
   workspace.scrollTop = 0;
+  initFilterableSelects();
 }
 
 /**
@@ -115,7 +116,7 @@ export function setActiveNav(route) {
 /**
  * Create a dropdown <select> element
  */
-export function createSelect(items, selectedValue = '', placeholder = '— Seleccionar —') {
+export function createSelect(items, selectedValue = '', placeholder = '— Seleccionar —', filterable = false) {
   let options = `<option value="">${placeholder}</option>`;
   items.forEach(item => {
     const value = item.id || item.value;
@@ -123,7 +124,8 @@ export function createSelect(items, selectedValue = '', placeholder = '— Selec
     const selected = value === selectedValue ? 'selected' : '';
     options += `<option value="${value}" ${selected}>${label}</option>`;
   });
-  return `<select class="form-select">${options}</select>`;
+  const filterAttr = filterable ? ' data-filterable' : '';
+  return `<select class="form-select"${filterAttr}>${options}</select>`;
 }
 
 /**
@@ -155,24 +157,61 @@ export function highlightJson(json) {
 }
 
 // ============================================
+// Filterable Selects — search/filter for large dropdowns
+// ============================================
+
+/** Find all selects with [data-filterable] and inject a search input above them */
+function initFilterableSelects() {
+  document.querySelectorAll('.form-select[data-filterable]').forEach(select => {
+    // Don't re-initialize
+    if (select.previousElementSibling?.classList?.contains('filter-select-input')) return;
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'filter-select-input form-input';
+    input.placeholder = 'Buscar...';
+
+    const wrap = select.closest('.quick-create-wrap');
+    if (wrap) {
+      wrap.insertBefore(input, wrap.firstChild);
+    } else {
+      const container = document.createElement('div');
+      container.className = 'filter-select-wrap';
+      select.parentNode.insertBefore(container, select);
+      container.appendChild(input);
+      container.appendChild(select);
+    }
+
+    input.addEventListener('input', () => {
+      const filter = input.value.toLowerCase();
+      Array.from(select.options).forEach(opt => {
+        if (!opt.value) return; // keep placeholder always visible
+        if (opt.selected) return; // keep selected option always visible
+        opt.hidden = !opt.textContent.toLowerCase().includes(filter);
+      });
+    });
+  });
+}
+
+// ============================================
 // Quick Create — inline entity creation
 // ============================================
 
 /** Return HTML for a small "+" button that triggers a quick-create modal */
 export function quickCreateBtn(entityType, title = '') {
-  const labels = { flag: 'Flag', item: 'Item', dialogue: 'Diálogo' };
+  const labels = { flag: 'Flag', item: 'Item', dialogue: 'Diálogo', node: 'Nodo' };
   const t = title || labels[entityType] || entityType;
   return `<button type="button" class="btn-quick-create" onclick="event.stopPropagation(); window.quickCreateEntity('${entityType}', this)" title="Crear ${t} nuevo">+</button>`;
 }
 
 /**
- * Open a mini-modal to quickly create a flag, item, or dialogue.
+ * Open a mini-modal to quickly create a flag, item, dialogue, or node.
  * On save: creates in Firestore, adds option to the parent <select>, auto-selects it,
  * and dispatches 'change' so dependent dropdowns (e.g. dialogue nodes) refresh.
  */
 window.quickCreateEntity = async function(entityType, btn) {
   // Dynamic imports to avoid circular deps
-  const { create, getAll } = await import('./db.js');
+  const { create, getAll, createNode } = await import('./db.js');
 
   // Find the sibling <select> element
   const wrap = btn.closest('.quick-create-wrap') || btn.parentElement;
@@ -181,6 +220,12 @@ window.quickCreateEntity = async function(entityType, btn) {
 
   let fieldsHtml = '';
   let modalTitle = '';
+
+  // Variables for node creation (shared between switch blocks)
+  let _nodeDialogueId = null;
+  let _nodeDialogueSlug = null;
+  let _nodeActionCard = null;
+  let _nodeIsItems = false;
 
   switch (entityType) {
     case 'flag':
@@ -216,6 +261,51 @@ window.quickCreateEntity = async function(entityType, btn) {
           <input type="text" class="form-input" id="qc-desc" placeholder="Ej: Primer encuentro en el bar">
         </div>`;
       break;
+    case 'node': {
+      // Find parent action card and the dialogue select within it
+      _nodeActionCard = btn.closest('.hs-action-card');
+      if (!_nodeActionCard) return;
+
+      _nodeIsItems = !!_nodeActionCard.querySelector('.item-action-target');
+      const dlgSelect = _nodeActionCard.querySelector(_nodeIsItems ? '.item-action-target' : '.hs-action-target');
+      _nodeDialogueSlug = dlgSelect?.value || '';
+
+      if (!_nodeDialogueSlug) {
+        showToast('Primero seleccioná un diálogo', 'info');
+        return;
+      }
+
+      // Resolve dialogue data
+      const data = _nodeIsItems ? (window._itemFormData || {}) : (window._roomFormData || {});
+      const dlg = (data.dialogues || []).find(d => (d.slug || d.id) === _nodeDialogueSlug);
+      if (!dlg) { showToast('Diálogo no encontrado en los datos del formulario', 'error'); return; }
+
+      _nodeDialogueId = dlg.id;
+
+      // Fetch characters for speaker dropdown
+      const characters = await getAll('characters');
+      const speakerOpts = [
+        { id: '__player__', name: 'Jugador' },
+        ...characters.map(c => ({ id: c.id, name: c.name }))
+      ];
+
+      modalTitle = 'Nuevo Nodo';
+      fieldsHtml = `
+        <div class="form-group">
+          <label class="form-label">Diálogo</label>
+          <input type="text" class="form-input" value="${escapeHtml(dlg.name)}" disabled>
+          <div class="form-hint">Se creará un nodo dentro de este diálogo.</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Quién habla</label>
+          ${createSelect(speakerOpts, '__player__', '— Seleccionar —')}
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Texto del Nodo</label>
+          <textarea class="form-textarea" id="qc-text" rows="3" placeholder="Lo que se dice en este nodo..."></textarea>
+        </div>`;
+      break;
+    }
     default:
       return;
   }
@@ -225,18 +315,24 @@ window.quickCreateEntity = async function(entityType, btn) {
     <button class="btn btn-primary" id="qc-save">Crear</button>
   `);
 
-  // Auto-focus the name input
+  // Auto-focus the name input (or text input for nodes)
   const nameInput = document.getElementById('qc-name');
   if (nameInput) nameInput.focus();
+  else document.getElementById('qc-text')?.focus();
 
   document.getElementById('qc-save').onclick = async () => {
-    const name = document.getElementById('qc-name').value.trim();
-    if (!name) {
-      nameInput.focus();
+    const saveBtn = document.getElementById('qc-save');
+
+    // For nodes, text is the required field
+    const isNode = entityType === 'node';
+    const name = document.getElementById('qc-name')?.value.trim() || '';
+    const text = document.getElementById('qc-text')?.value.trim() || '';
+
+    if (isNode ? !text : !name) {
+      (nameInput || document.getElementById('qc-text'))?.focus();
       return;
     }
 
-    const saveBtn = document.getElementById('qc-save');
     saveBtn.disabled = true;
     saveBtn.textContent = 'Guardando...';
 
@@ -270,6 +366,27 @@ window.quickCreateEntity = async function(entityType, btn) {
           optionValue = slug;
           optionLabel = name;
           break;
+        }
+        case 'node': {
+          const speakerId = document.querySelector('#modal .form-select')?.value || '__player__';
+          const prefix = 'node';
+          const base = text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+          const slug = `${prefix}_${base}`;
+
+          newId = await createNode(_nodeDialogueId, { slug, speakerId, text, playerResponses: [] });
+          optionValue = slug || newId;
+          optionLabel = `${optionValue} — "${text.slice(0, 40)}${text.length > 40 ? '...' : ''}"`;
+
+          // Refresh the node dropdown and auto-select the new node
+          const nodeSelect = _nodeActionCard.querySelector(_nodeIsItems ? '.item-action-node' : '.hs-action-node');
+          if (nodeSelect) {
+            const loadFn = _nodeIsItems ? window.loadItemDialogueNodes : window.loadHsDialogueNodes;
+            await loadFn(_nodeActionCard, _nodeDialogueSlug, optionValue);
+          }
+
+          closeModal();
+          showToast(`Nodo "${text.slice(0, 30)}" creado`, 'success');
+          return; // Skip the normal select.append logic — loadFn handles it
         }
       }
 

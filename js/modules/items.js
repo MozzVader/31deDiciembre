@@ -450,7 +450,7 @@ function renderItemInteractionRow(interaction, index, data) {
         <div class="form-group">
           <label class="form-label">Condición (Flag)</label>
           <div class="quick-create-wrap">
-            ${createSelect(flagOpts, interaction.conditionSlug || '', '— Sin condición (siempre accesible) —').replace('class="form-select"', 'class="form-select item-interaction-condition"')}
+            ${createSelect(flagOpts, interaction.conditionSlug || '', '— Sin condición (siempre accesible) —', true).replace('class="form-select"', 'class="form-select item-interaction-condition"')}
             ${quickCreateBtn('flag')}
           </div>
           <div class="form-hint">La interacción solo está disponible si este flag está activo.</div>
@@ -528,7 +528,7 @@ function itemActionFieldsHtml(type, data, targetVal, valueVal) {
       const dlgOpts = data.dialogues.map(d => ({ id: d.slug || d.id, name: d.name }));
       targetHtml = `<label class="form-label">Diálogo</label>
         <div class="quick-create-wrap">
-          <select class="form-select item-action-target">
+          <select class="form-select item-action-target" data-filterable>
             <option value="">— Seleccionar diálogo —</option>
             ${dlgOpts.map(o => `<option value="${escapeHtml(o.id)}" ${o.id === targetVal ? 'selected' : ''}>${escapeHtml(o.name)}</option>`).join('')}
           </select>
@@ -536,7 +536,10 @@ function itemActionFieldsHtml(type, data, targetVal, valueVal) {
         </div>
         <div class="form-hint">Al seleccionar un diálogo se cargan sus nodos abajo.</div>`;
       valueHtml = `<label class="form-label">Nodo Inicial (opcional)</label>
-        <select class="form-select item-action-node" data-saved-node="${escapeHtml(valueVal || '')}"><option value="">— (arranca desde el primer nodo) —</option></select>
+        <div class="quick-create-wrap">
+          <select class="form-select item-action-node" data-saved-node="${escapeHtml(valueVal || '')}" data-filterable><option value="">— (arranca desde el primer nodo) —</option></select>
+          ${quickCreateBtn('node')}
+        </div>
         <div class="form-hint">Dejá vacío para arrancar desde el primer nodo.</div>`;
       break;
     }
@@ -545,7 +548,7 @@ function itemActionFieldsHtml(type, data, targetVal, valueVal) {
       const itemOpts = data.allItems.map(i => ({ id: i.slug || i.id, name: i.name }));
       targetHtml = `<label class="form-label">Item</label>
         <div class="quick-create-wrap">
-          <select class="form-select item-action-target">
+          <select class="form-select item-action-target" data-filterable>
             <option value="">— Seleccionar item —</option>
             ${itemOpts.map(o => `<option value="${escapeHtml(o.id)}" ${o.id === targetVal ? 'selected' : ''}>${escapeHtml(o.name)}</option>`).join('')}
           </select>
@@ -557,7 +560,7 @@ function itemActionFieldsHtml(type, data, targetVal, valueVal) {
       const flagOpts = data.flags.map(f => ({ id: f.name, name: f.name }));
       targetHtml = `<label class="form-label">Flag</label>
         <div class="quick-create-wrap">
-          <select class="form-select item-action-target">
+          <select class="form-select item-action-target" data-filterable>
             <option value="">— Seleccionar flag —</option>
             ${flagOpts.map(o => `<option value="${escapeHtml(o.id)}" ${o.id === targetVal ? 'selected' : ''}>${escapeHtml(o.name)}</option>`).join('')}
           </select>

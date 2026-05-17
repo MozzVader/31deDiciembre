@@ -739,7 +739,10 @@ window.addExit = async function() {
       </div>
       <div class="form-group" style="margin-bottom:0">
         <label class="form-label">Condición (Flag)</label>
-        ${createSelect(flagsList, '', '— Sin condición (siempre accesible) —')}
+        <div class="quick-create-wrap">
+          ${createSelect(flagsList, '', '— Sin condición (siempre accesible) —', true)}
+          ${quickCreateBtn('flag')}
+        </div>
       </div>
     </div>
   `;
@@ -934,7 +937,10 @@ function renderExitRow(exit = {}, rooms = [], flags = [], index = 0) {
       </div>
       <div class="form-group" style="margin-bottom:0">
         <label class="form-label">Condición (Flag)</label>
-        ${createSelect(flags, exit.conditionFlag || '', '— Sin condición (siempre accesible) —')}
+        <div class="quick-create-wrap">
+          ${createSelect(flags, exit.conditionFlag || '', '— Sin condición (siempre accesible) —', true)}
+          ${quickCreateBtn('flag')}
+        </div>
       </div>
     </div>
   `;

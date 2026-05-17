@@ -91,6 +91,7 @@ export function renderWorkspace(html) {
   workspace.innerHTML = html;
   workspace.scrollTop = 0;
   initFilterableSelects();
+  observeComboboxes();
 }
 
 /**
@@ -157,41 +158,231 @@ export function highlightJson(json) {
 }
 
 // ============================================
-// Filterable Selects — search/filter for large dropdowns
+// Combobox — searchable dropdown replacement
 // ============================================
 
-/** Find all selects with [data-filterable] and inject a search input above them */
+/**
+ * Custom combobox that replaces a <select data-filterable>.
+ * The original select stays in the DOM (hidden) so all existing
+ * value-reading code continues to work unchanged.
+ */
+class Combobox {
+  constructor(select) {
+    this.select = select;
+    this.select.style.display = 'none';
+    this.select.removeAttribute('data-filterable');
+    this.isOpen = false;
+    this.highlightedIndex = -1;
+
+    this._build();
+    this._bindEvents();
+    this._syncDisplay();
+
+    // Watch for external option changes (e.g. node loading, quick-create)
+    this._optObserver = new MutationObserver(() => this._syncDisplay());
+    this._optObserver.observe(this.select, {
+      childList: true, subtree: true,
+      attributes: true, attributeFilter: ['selected']
+    });
+  }
+
+  destroy() {
+    this._optObserver.disconnect();
+    this.wrapper.remove();
+    this.select.style.display = '';
+    this.select.setAttribute('data-filterable', '');
+  }
+
+  _build() {
+    this.wrapper = document.createElement('div');
+    this.wrapper.className = 'combobox';
+
+    this.input = document.createElement('input');
+    this.input.type = 'text';
+    this.input.className = 'combobox-input';
+    this.input.setAttribute('autocomplete', 'off');
+    this.input.setAttribute('spellcheck', 'false');
+    this.input.placeholder = this._getPlaceholder();
+
+    this.arrow = document.createElement('span');
+    this.arrow.className = 'combobox-arrow';
+    this.arrow.innerHTML = '<i class="fa-solid fa-chevron-down" style="font-size:11px"></i>';
+
+    this.listbox = document.createElement('ul');
+    this.listbox.className = 'combobox-listbox';
+    this.listbox.setAttribute('role', 'listbox');
+
+    this.wrapper.appendChild(this.input);
+    this.wrapper.appendChild(this.arrow);
+    this.wrapper.appendChild(this.listbox);
+
+    this.select.parentNode.insertBefore(this.wrapper, this.select);
+  }
+
+  _getPlaceholder() {
+    const ph = this.select.querySelector('option[value=""]');
+    return ph ? ph.textContent : 'Buscar...';
+  }
+
+  _syncDisplay() {
+    const selected = this.select.querySelector('option:checked');
+    this.input.value = (selected && selected.value) ? selected.textContent : '';
+  }
+
+  open() {
+    this._renderOptions();
+    this.listbox.classList.add('open');
+    this.arrow.classList.add('open');
+    this.isOpen = true;
+    this.highlightedIndex = -1;
+    // Highlight selected option if any
+    const selOpt = this.listbox.querySelector('.combobox-option.selected');
+    if (selOpt) {
+      selOpt.classList.add('highlighted');
+      this.highlightedIndex = Array.from(this.listbox.children).indexOf(selOpt);
+    }
+  }
+
+  close() {
+    this.listbox.classList.remove('open');
+    this.arrow.classList.remove('open');
+    this.isOpen = false;
+    this.highlightedIndex = -1;
+    this._syncDisplay();
+  }
+
+  _renderOptions() {
+    const filter = this.input.value.toLowerCase();
+    this.listbox.innerHTML = '';
+    let count = 0;
+
+    Array.from(this.select.options).forEach(opt => {
+      const text = opt.textContent.toLowerCase();
+      const matches = !filter || !opt.value || text.includes(filter) || opt.selected;
+      if (!matches) return;
+
+      const li = document.createElement('li');
+      li.className = 'combobox-option'
+        + (opt.selected ? ' selected' : '')
+        + (!opt.value ? ' placeholder' : '');
+      li.textContent = opt.textContent;
+      li.dataset.value = opt.value;
+      li.setAttribute('role', 'option');
+
+      li.addEventListener('mousedown', (e) => {
+        e.preventDefault(); // prevent input blur
+        this._selectValue(opt.value);
+      });
+
+      this.listbox.appendChild(li);
+      count++;
+    });
+
+    if (count === 0) {
+      const li = document.createElement('li');
+      li.className = 'combobox-empty';
+      li.textContent = 'Sin resultados';
+      this.listbox.appendChild(li);
+    }
+  }
+
+  _highlight(el) {
+    this.listbox.querySelectorAll('.combobox-option').forEach(o => o.classList.remove('highlighted'));
+    if (el) {
+      el.classList.add('highlighted');
+      this.highlightedIndex = Array.from(this.listbox.children).indexOf(el);
+      el.scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  _selectValue(value) {
+    this.select.value = value;
+    this.select.dispatchEvent(new Event('change', { bubbles: true }));
+    this._syncDisplay();
+    this.close();
+  }
+
+  _bindEvents() {
+    this.input.addEventListener('focus', () => {
+      if (!this.isOpen) this.open();
+    });
+
+    this.input.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!this.isOpen) this.open();
+    });
+
+    this.input.addEventListener('input', () => {
+      if (this.isOpen) this._renderOptions();
+      else this.open();
+    });
+
+    this.input.addEventListener('keydown', (e) => {
+      const options = this.listbox.querySelectorAll('.combobox-option');
+
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          if (!this.isOpen) { this.open(); return; }
+          this.highlightedIndex = Math.min(this.highlightedIndex + 1, options.length - 1);
+          this._highlight(options[this.highlightedIndex]);
+          break;
+
+        case 'ArrowUp':
+          e.preventDefault();
+          this.highlightedIndex = Math.max(this.highlightedIndex - 1, 0);
+          this._highlight(options[this.highlightedIndex]);
+          break;
+
+        case 'Enter':
+          e.preventDefault();
+          if (this.isOpen && this.highlightedIndex >= 0 && options[this.highlightedIndex]) {
+            this._selectValue(options[this.highlightedIndex].dataset.value);
+          } else if (!this.isOpen) {
+            this.open();
+          }
+          break;
+
+        case 'Escape':
+          e.preventDefault();
+          this._syncDisplay();
+          this.close();
+          this.input.blur();
+          break;
+
+        case 'Tab':
+          this.close();
+          break;
+      }
+    });
+
+    this.input.addEventListener('blur', () => {
+      // Small delay to let mousedown on option fire first
+      setTimeout(() => { if (this.isOpen) this.close(); }, 150);
+    });
+  }
+}
+
+/** Transform all [data-filterable] selects into Combobox instances */
 function initFilterableSelects() {
   document.querySelectorAll('.form-select[data-filterable]').forEach(select => {
-    // Don't re-initialize
-    if (select.previousElementSibling?.classList?.contains('filter-select-input')) return;
-
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.className = 'filter-select-input form-input';
-    input.placeholder = 'Buscar...';
-
-    const wrap = select.closest('.quick-create-wrap');
-    if (wrap) {
-      wrap.insertBefore(input, wrap.firstChild);
-    } else {
-      const container = document.createElement('div');
-      container.className = 'filter-select-wrap';
-      select.parentNode.insertBefore(container, select);
-      container.appendChild(input);
-      container.appendChild(select);
-    }
-
-    input.addEventListener('input', () => {
-      const filter = input.value.toLowerCase();
-      Array.from(select.options).forEach(opt => {
-        if (!opt.value) return; // keep placeholder always visible
-        if (opt.selected) return; // keep selected option always visible
-        opt.hidden = !opt.textContent.toLowerCase().includes(filter);
-      });
-    });
+    // Skip if already wrapped by a combobox
+    if (select.previousElementSibling?.classList?.contains('combobox')) return;
+    new Combobox(select);
   });
 }
+
+/** Set up a MutationObserver to auto-init comboboxes after dynamic content */
+let _comboboxObserver = null;
+function observeComboboxes() {
+  const workspace = document.getElementById('workspace');
+  if (!workspace || _comboboxObserver) return;
+  _comboboxObserver = new MutationObserver(() => initFilterableSelects());
+  _comboboxObserver.observe(workspace, { childList: true, subtree: true });
+}
+
+// Expose for use after dynamic HTML insertion
+window.initFilterableSelects = initFilterableSelects;
 
 // ============================================
 // Quick Create — inline entity creation

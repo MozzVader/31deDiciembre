@@ -1864,40 +1864,104 @@ a:hover {
   background: rgba(99, 102, 241, 0.06);
 }
 
-/* ---------- Filterable Select ---------- */
-.filter-select-input {
-  flex: 0 0 100%;
-  font-size: 13px;
-  padding: 6px 10px;
+/* ---------- Combobox (searchable dropdown) ---------- */
+.combobox {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.combobox-input {
+  width: 100%;
+  height: 38px;
+  padding: 0 32px 0 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
   color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
   outline: none;
-  transition: border-color 0.15s ease;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
 }
 
-.filter-select-input:focus {
+.combobox-input:focus {
   border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
-.filter-select-input::placeholder {
+.combobox-input::placeholder {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 
-.quick-create-wrap > .form-select {
-  flex: 1;
-  min-width: 0;
+.combobox-arrow {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+  transition: transform 0.15s ease;
 }
 
-.filter-select-wrap {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+.combobox-arrow.open {
+  transform: translateY(-50%) rotate(180deg);
 }
 
-.filter-select-wrap > .form-select {
-  flex: 1;
-  min-width: 0;
+.combobox-listbox {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 1000;
+  display: none;
+  padding: 4px;
+  margin: 0;
+  list-style: none;
+}
+
+.combobox-listbox.open {
+  display: block;
+}
+
+.combobox-option {
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.combobox-option:hover,
+.combobox-option.highlighted {
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.combobox-option.selected {
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.combobox-option.placeholder {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.combobox-empty {
+  padding: 12px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
 }

@@ -2,7 +2,7 @@
 // Módulo: Habitaciones (Rooms) — con Hotspots
 // ============================================
 import { getAll, create, update, remove, getOne, getNodes } from '../db.js';
-import { renderWorkspace, setBreadcrumbs, updateBadge, showToast, confirm, escapeHtml, createSelect } from '../ui.js';
+import { renderWorkspace, setBreadcrumbs, updateBadge, showToast, confirm, escapeHtml, createSelect, quickCreateBtn } from '../ui.js';
 
 /** Generate a slug from a name: 'Bar Principal' → 'room_bar_principal' */
 function generateSlug(prefix, name) {
@@ -421,14 +421,20 @@ function renderInteractionRow(interaction, index, data) {
           </div>
           <div class="form-group interaction-required-item-wrap" style="${type !== 'use_item' ? 'display:none' : ''}">
             <label class="form-label">Item Requerido</label>
-            ${sel(itemOpts, interaction.requiredItemSlug || '', '— Seleccionar item —', 'interaction-required-item')}
+            <div class="quick-create-wrap">
+              ${sel(itemOpts, interaction.requiredItemSlug || '', '— Seleccionar item —', 'interaction-required-item')}
+              ${quickCreateBtn('item')}
+            </div>
             <div class="form-hint">El item del inventario que el jugador necesita usar sobre este hotspot.</div>
           </div>
         </div>
 
         <div class="form-group">
           <label class="form-label">Condición (Flag)</label>
-          ${sel(flagOpts, interaction.conditionSlug || '', '— Sin condición (siempre accesible) —', 'interaction-condition')}
+          <div class="quick-create-wrap">
+            ${sel(flagOpts, interaction.conditionSlug || '', '— Sin condición (siempre accesible) —', 'interaction-condition')}
+            ${quickCreateBtn('flag')}
+          </div>
           <div class="form-hint">La interacción solo está disponible si este flag está activo.</div>
         </div>
 
@@ -522,7 +528,10 @@ function hsActionFieldsHtml(type, data, targetVal, valueVal) {
     case 'StartDialogue': {
       const dlgOpts = data.dialogues.map(d => ({ id: d.slug || d.id, name: d.name }));
       targetHtml = `<label class="form-label">Diálogo</label>
-        ${sel(dlgOpts, targetVal, '— Seleccionar diálogo —', 'hs-action-target')}
+        <div class="quick-create-wrap">
+          ${sel(dlgOpts, targetVal, '— Seleccionar diálogo —', 'hs-action-target')}
+          ${quickCreateBtn('dialogue')}
+        </div>
         <div class="form-hint">Al seleccionar un diálogo se cargan sus nodos abajo.</div>`;
       valueHtml = `<label class="form-label">Nodo Inicial (opcional)</label>
         <select class="form-select hs-action-node" data-saved-node="${escapeHtml(valueVal || '')}"><option value="">— (arranca desde el primer nodo) —</option></select>
@@ -533,13 +542,19 @@ function hsActionFieldsHtml(type, data, targetVal, valueVal) {
     case 'RemoveItem': {
       const itemOpts = data.items.map(i => ({ id: i.slug || i.id, name: i.name }));
       targetHtml = `<label class="form-label">Item</label>
-        ${sel(itemOpts, targetVal, '— Seleccionar item —', 'hs-action-target')}`;
+        <div class="quick-create-wrap">
+          ${sel(itemOpts, targetVal, '— Seleccionar item —', 'hs-action-target')}
+          ${quickCreateBtn('item')}
+        </div>`;
       break;
     }
     case 'SetFlag': {
       const flagOpts = data.flags.map(f => ({ id: f.name, name: f.name }));
       targetHtml = `<label class="form-label">Flag</label>
-        ${sel(flagOpts, targetVal, '— Seleccionar flag —', 'hs-action-target')}`;
+        <div class="quick-create-wrap">
+          ${sel(flagOpts, targetVal, '— Seleccionar flag —', 'hs-action-target')}
+          ${quickCreateBtn('flag')}
+        </div>`;
       valueHtml = `<label class="form-label">Valor</label>
         <select class="form-select hs-action-value">
           <option value="true" ${valueVal === 'true' ? 'selected' : ''}>true</option>

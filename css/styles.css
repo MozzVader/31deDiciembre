@@ -1830,3 +1830,35 @@ a:hover {
   font-weight: 600;
   color: var(--success);
 }
+
+/* ---------- Quick Create Button ---------- */
+.quick-create-wrap {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.btn-quick-create {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border: 1.5px dashed var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  line-height: 1;
+  padding: 0;
+}
+
+.btn-quick-create:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(99, 102, 241, 0.06);
+}

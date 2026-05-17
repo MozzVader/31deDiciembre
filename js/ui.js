@@ -153,3 +153,144 @@ export function highlightJson(json) {
     return `<span class="${cls}">${match}</span>`;
   });
 }
+
+// ============================================
+// Quick Create — inline entity creation
+// ============================================
+
+/** Return HTML for a small "+" button that triggers a quick-create modal */
+export function quickCreateBtn(entityType, title = '') {
+  const labels = { flag: 'Flag', item: 'Item', dialogue: 'Diálogo' };
+  const t = title || labels[entityType] || entityType;
+  return `<button type="button" class="btn-quick-create" onclick="event.stopPropagation(); window.quickCreateEntity('${entityType}', this)" title="Crear ${t} nuevo">+</button>`;
+}
+
+/**
+ * Open a mini-modal to quickly create a flag, item, or dialogue.
+ * On save: creates in Firestore, adds option to the parent <select>, auto-selects it,
+ * and dispatches 'change' so dependent dropdowns (e.g. dialogue nodes) refresh.
+ */
+window.quickCreateEntity = async function(entityType, btn) {
+  // Dynamic imports to avoid circular deps
+  const { create, getAll } = await import('./db.js');
+
+  // Find the sibling <select> element
+  const wrap = btn.closest('.quick-create-wrap') || btn.parentElement;
+  const select = wrap.querySelector('.form-select');
+  if (!select) return;
+
+  let fieldsHtml = '';
+  let modalTitle = '';
+
+  switch (entityType) {
+    case 'flag':
+      modalTitle = 'Nueva Flag';
+      fieldsHtml = `
+        <div class="form-group">
+          <label class="form-label">Nombre</label>
+          <input type="text" class="form-input" id="qc-name" placeholder="Ej: tiene_llave, barco_listo">
+          <div class="form-hint">Usá snake_case. Será el slug y el identificador de la flag.</div>
+        </div>`;
+      break;
+    case 'item':
+      modalTitle = 'Nuevo Item';
+      fieldsHtml = `
+        <div class="form-group">
+          <label class="form-label">Nombre</label>
+          <input type="text" class="form-input" id="qc-name" placeholder="Ej: Llave dorada">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Descripción (breve)</label>
+          <input type="text" class="form-input" id="qc-desc" placeholder="Ej: Una vieja llave oxidada">
+        </div>`;
+      break;
+    case 'dialogue':
+      modalTitle = 'Nuevo Diálogo';
+      fieldsHtml = `
+        <div class="form-group">
+          <label class="form-label">Nombre</label>
+          <input type="text" class="form-input" id="qc-name" placeholder="Ej: Diálogo con el bartender">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Descripción (opcional)</label>
+          <input type="text" class="form-input" id="qc-desc" placeholder="Ej: Primer encuentro en el bar">
+        </div>`;
+      break;
+    default:
+      return;
+  }
+
+  showModal(modalTitle, fieldsHtml, `
+    <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-primary" id="qc-save">Crear</button>
+  `);
+
+  // Auto-focus the name input
+  const nameInput = document.getElementById('qc-name');
+  if (nameInput) nameInput.focus();
+
+  document.getElementById('qc-save').onclick = async () => {
+    const name = document.getElementById('qc-name').value.trim();
+    if (!name) {
+      nameInput.focus();
+      return;
+    }
+
+    const saveBtn = document.getElementById('qc-save');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Guardando...';
+
+    try {
+      let newId, optionValue, optionLabel;
+
+      switch (entityType) {
+        case 'flag': {
+          const flagName = name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+          newId = await create('flags', { name: flagName, description: name });
+          optionValue = flagName;
+          optionLabel = flagName;
+          break;
+        }
+        case 'item': {
+          const desc = document.getElementById('qc-desc')?.value.trim() || '';
+          const prefix = 'item';
+          const base = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+          const slug = `${prefix}_${base}`;
+          newId = await create('items', { slug, name, description: desc });
+          optionValue = slug;
+          optionLabel = name;
+          break;
+        }
+        case 'dialogue': {
+          const desc = document.getElementById('qc-desc')?.value.trim() || '';
+          const prefix = 'dlg';
+          const base = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+          const slug = `${prefix}_${base}`;
+          newId = await create('dialogues', { slug, name, description: desc });
+          optionValue = slug;
+          optionLabel = name;
+          break;
+        }
+      }
+
+      // Add new option to the select and auto-select it
+      const opt = document.createElement('option');
+      opt.value = optionValue;
+      opt.textContent = optionLabel;
+      opt.selected = true;
+      select.appendChild(opt);
+
+      // Dispatch change so dependent dropdowns refresh (e.g. node loading for dialogue)
+      select.dispatchEvent(new Event('change'));
+
+      closeModal();
+      showToast(`${modalTitle} "${name}" creada`, 'success');
+    } catch (err) {
+      console.error('Quick create error:', err);
+      showToast('Error al crear. Verificá la consola.', 'error');
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Crear';
+    }
+  };
+};

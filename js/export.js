@@ -117,6 +117,7 @@ export async function exportProject() {
 
         const interactions = (item.interactions || []).map(int => ({
           type: int.type || 'examine',
+          conditionSlug: int.conditionSlug || null,
           actions: (int.actions || []).map(act => {
             const a = { type: act.type };
             if (act.type === 'StartDialogue') {

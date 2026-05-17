@@ -422,6 +422,7 @@ function renderItemInteractionRow(interaction, index, data) {
   const type = interaction.type || 'examine';
   const actions = (interaction.actions || [])
     .map((act, i) => renderItemActionRow(act, i, data)).join('');
+  const flagOpts = data.flags.map(f => ({ id: f.name, name: f.name }));
 
   return `
     <div class="interaction-card" data-item-interaction-index="${index}">
@@ -444,6 +445,12 @@ function renderItemInteractionRow(interaction, index, data) {
             <option value="give" ${type === 'give' ? 'selected' : ''}>Dar (Give)</option>
           </select>
           <div class="form-hint">Examinar: mirar el item. Usar: usar el item. Abrir/Cerrar: para items con estados (cajas, puertas, recipientes).</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Condición (Flag)</label>
+          ${createSelect(flagOpts, interaction.conditionSlug || '', '— Sin condición (siempre accesible) —').replace('class="form-select"', 'class="form-select item-interaction-condition"')}
+          <div class="form-hint">La interacción solo está disponible si este flag está activo.</div>
         </div>
 
         <div class="form-group" style="margin-bottom:0;">
@@ -564,8 +571,9 @@ function collectItemInteractions() {
 
   cards.forEach(card => {
     const type = card.querySelector('.item-interaction-type')?.value || 'examine';
+    const conditionSlug = card.querySelector('.item-interaction-condition')?.value || '';
     const actions = collectItemActions(card);
-    interactions.push({ type, actions });
+    interactions.push({ type, conditionSlug: conditionSlug || null, actions });
   });
 
   return interactions;

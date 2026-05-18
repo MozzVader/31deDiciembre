@@ -26,15 +26,13 @@ export async function renderDashboard() {
     ]);
 
     // Count dialogue nodes
-    let nodeCount = 0;
     const nodeCounts = await Promise.all(
       dialogues.map(async (d) => {
         const nodes = await getNodes(d.id);
-        nodeCounts.push({ id: d.id, count: nodes.length });
         return nodes.length;
       })
     );
-    nodeCount = nodeCounts.reduce((a, b) => a + b, 0);
+    const nodeCount = nodeCounts.reduce((a, b) => a + b, 0);
 
     // Update all sidebar badges
     updateBadge('rooms', rooms.length);

@@ -1,9 +1,9 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.0-blue?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/version-1.3-blue?style=for-the-badge" alt="Version">
   <img src="https://img.shields.io/badge/license-CC%20BY--NC--ND%204.0-lightgrey?style=for-the-badge" alt="License">
   <img src="https://img.shields.io/badge/status-en%20desarrollo-orange?style=for-the-badge" alt="Status">
-  <img src="https://img.shields.io/badge/commits-19-green?style=for-the-badge" alt="Commits">
-  <img src="https://img.shields.io/badge/LOC-5.400%2B-blueviolet?style=for-the-badge" alt="Lines of Code">
+  <img src="https://img.shields.io/badge/commits-35-green?style=for-the-badge" alt="Commits">
+  <img src="https://img.shields.io/badge/LOC-7.400%2B-blueviolet?style=for-the-badge" alt="Lines of Code">
 </p>
 
 <h1 align="center">31 de Diciembre — Adventure Design Toolbox</h1>
@@ -27,22 +27,114 @@
 
 ## Vista general
 
-Una toolbox pensada por y para desarrollores de aventuras gráficas. Permite modelar todos los elementos del juego — habitaciones, personajes, inventario, diálogos, triggers y notas — y exportar todo a un JSON estructurado listo para traducir a Visionaire Studio.
+Una toolbox pensada por y para desarrolladores de aventuras gráficas. Permite modelar todos los elementos del juego — habitaciones con hotspots interactivos, personajes, inventario con combinaciones e interacciones, diálogos en árbol, triggers condicionales y notas — y exportar todo a un JSON estructurado listo para traducir a Visionaire Studio.
 
 **Zero framework, zero build step.** Vanilla JS con ES modules, Firebase Auth + Firestore, y deploy directo a GitHub Pages.
+
+## Autenticación
+
+El sistema incluye registro y login con Firebase Authentication:
+
+- **Registro** con email, contraseña y nombre
+- **Login** con email y contraseña
+- **Recuperación de contraseña** via email
+- **Logout** desde el sidebar
+- Email del usuario visible en el topbar una vez autenticado
+
+Todo el flujo de autenticación se maneja en un screen dedicado antes de acceder al editor.
 
 ## Módulos
 
 | Icono | Módulo | Descripción |
 |:-----:|--------|-------------|
-| 🏠 | **Habitaciones** | Espacios físicos con salidas direccionales y condiciones de desbloqueo |
-| 👥 | **Personajes** | NPCs con bio, rol y ubicación inicial en el mapa |
-| 🎯 | **Inventario & Flags** | Items combinables con sistema `consumesSelf` / `consumesTarget` + variables de estado |
-| ⏱️ | **Cronología** | Timeline de eventos con triggers condicionales y acciones |
-| 💬 | **Diálogos** | Árboles de diálogo con nodos, respuestas del jugador y condiciones |
-| 📝 | **Notas Sueltas** | Editor Markdown con toolbar WYSIWYG, preview en vivo y badges de estado |
+| 🏠 | **Habitaciones** | Espacios físicos con salidas direccionales, condiciones de desbloqueo y sistema completo de hotspots interactivos |
+| 👥 | **Personajes** | NPCs con bio, rol, ubicación inicial, avatar y diálogo por defecto |
+| 🎯 | **Inventario & Flags** | Items combinables con sistema `consumesSelf` / `consumesTarget`, interacciones propias y variables de estado |
+| ⏱️ | **Cronología** | Timeline de eventos con triggers condicionales y acciones contextuales |
+| 💬 | **Diálogos** | Árboles de diálogo con nodos, respuestas del jugador, condiciones y acciones |
+| 📝 | **Notas Sueltas** | Editor Markdown con toolbar WYSIWYG, preview en vivo, auto-save y badges de estado |
 
-### Sistema de Slugs
+### Habitaciones — Hotspots
+
+Cada habitación puede contener múltiples **hotspots** (objetos de escena interactivos). Cada hotspot es una tarjeta colapsable que incluye:
+
+- **Nombre, slug y descripción** del objeto
+- **Item conectado** — vincula el hotspot a un item del inventario para trazabilidad
+- **Interacciones** — tipos disponibles: Examinar, Usar, Abrir, Cerrar, Usar Item En Este, Recoger, Hablar
+- Cada interacción puede tener **condición (flag)** e **item requerido** como prerequisitos
+- **Acciones por interacción**: Iniciar Diálogo, Agregar Item, Remover Item, Setear Flag, Cambiar Estado del Hotspot
+
+### Inventario — Interacciones de Items
+
+Además del sistema de combinaciones (item A + item B → resultado), cada item puede tener sus propias interacciones:
+
+- **Tipos**: Examinar (click derecho), Usar (click izquierdo), Abrir, Cerrar, Recoger, Dar
+- Cada interacción soporta **condición (flag)** y **acciones** (Iniciar Diálogo, Agregar/Remover Item, Setear Flag)
+- Separación clara entre combinaciones (dos items → resultado) e interacciones (acciones sobre un item individual)
+
+### Cronología — Triggers y Acciones
+
+El timeline soporta **5 tipos de triggers** que disparan eventos automáticamente:
+
+| Trigger | Descripción |
+|---------|-------------|
+| `FlagChange` | Se dispara cuando un flag cambia a un valor específico |
+| `RoomEnter` | Se dispara al entrar a una habitación |
+| `ItemPickup` | Se dispara al recoger un item |
+| `DialogueEnd` | Se dispara al finalizar un diálogo |
+| `AutoStart` | Se dispara al inicio del juego (sin target) |
+
+Y **6 tipos de acciones** con dropdowns contextuales que cambian según el tipo:
+
+| Acción | Parámetros |
+|--------|-----------|
+| `MoveCharacter` | Personaje → Habitación destino |
+| `SetFlag` | Flag → Valor |
+| `UnlockExit` | Habitación → Dirección |
+| `GiveItem` | Item al jugador |
+| `RemoveItem` | Item del jugador |
+| `StartDialogue` | Diálogo → Nodo inicial (opcional) |
+
+### Diálogos
+
+Árboles de diálogo con nodos anidados:
+
+- Cada nodo tiene **texto del speaker**, **ID del hablante** (personaje) y respuestas del jugador
+- Cada respuesta puede tener **condición (flag)** para mostrarla u ocultarla
+- **Acción al seleccionar** una respuesta: Iniciar Diálogo, Setear Flag, etc.
+- Navegación entre nodos mediante el campo "Ir al Nodo"
+
+### Notas Sueltas
+
+Editor de notas con funcionalidades avanzadas:
+
+- **Toolbar WYSIWYG**: negrita, cursiva, links, imágenes, code blocks, listas
+- **Preview en vivo** que renderiza Markdown en tiempo real
+- **Auto-save** con debounce de 2 segundos
+- **Exportar como .md** — descarga directa del archivo Markdown
+- **Badges de estado**: Nueva → En Progreso → Completada (clic para ciclar)
+
+## Features de UX
+
+### Quick Create Inline (+)
+
+Desde cualquier dropdown que referencie otra entidad (flags, items, diálogos, nodos), un botón **"+"** permite crear la entidad al vuelo sin abandonar el formulario actual. La nueva entidad se guarda en Firestore, se agrega al dropdown y se auto-selecciona.
+
+### Combobox — Dropdowns con Búsqueda Integrada
+
+Todos los dropdowns principales se reemplazan por **comboboxes custom** con búsqueda integrada:
+
+- Escritura en tiempo real para filtrar opciones
+- Navegación con teclado (flechas ↑↓, Enter, Escape, Tab)
+- Resaltado del texto coincidente en cada opción
+- Auto-inicialización vía MutationObserver tras contenido dinámico
+
+### Imágenes
+
+- **Habitaciones**: imagen de fondo con upload desde disco (FileReader → base64), URL o botón para limpiar. Thumbnails en la grilla de tarjetas.
+- **Personajes**: avatar circular con el mismo sistema de upload/URL/clear.
+
+### Slugs
 
 Cada entidad tiene un **slug** auto-generado y editable manualmente, usado como identificador estable en todo el sistema y en el JSON de exportación:
 
@@ -54,20 +146,45 @@ Cada entidad tiene un **slug** auto-generado y editable manualmente, usado como 
 | `event_` | Trigger | `event_inicio_juego` |
 | `dlg_` | Diálogo | `dlg_monologo_inicial` |
 | `node_` | Nodo de diálogo | `node_uffff_31_de_diciembre` |
+| `hotspot_` | Hotspot | `hotspot_cubetera` |
 
 ## Export
 
-El botón **"Exportar JSON"** genera un JSON completo con todas las entidades referenciadas por slug, listo para traducir a la estructura de Visionaire Studio.
+El botón **"Exportar JSON"** abre un modal con:
+
+- **Preview** del JSON con syntax highlighting
+- **Descarga** como archivo timestamped (`31deDiciembre_design_<timestamp>.json`)
+- **Copiar al portapapeles**
+- Resumen de entidades exportadas (X habitaciones, Y personajes, Z items, etc.)
+
+El JSON incluye todas las entidades referenciadas por slug, con hotspots, interacciones de items, nodos de diálogo con condiciones y acciones:
 
 ```json
 {
   "gameMeta": { "name": "...", "version": "1.0", "startRoomSlug": "..." },
-  "rooms": [{ "slug": "...", "name": "...", "exits": [...] }],
-  "characters": [{ "slug": "...", "startingRoomSlug": "..." }],
+  "rooms": [{
+    "slug": "room_bar_los_angeles",
+    "name": "Bar Los Ángeles",
+    "exits": [...],
+    "hotspots": [{
+      "slug": "hotspot_cubetera",
+      "name": "Cubetera",
+      "interactions": [{
+        "type": "examine",
+        "conditionSlug": "flag_cubetera_vista",
+        "actions": [{ "type": "startDialogue", "dialogueSlug": "dlg_cubetera", "nodeSlug": "node_inicio" }]
+      }]
+    }]
+  }],
+  "characters": [{ "slug": "...", "name": "...", "startingRoomSlug": "...", "defaultDialogueSlug": "..." }],
   "conditions": [{ "slug": "...", "defaultValue": false }],
-  "items": [{ "slug": "...", "combinations": [...] }],
-  "triggers": [{ "slug": "...", "conditionToFire": {...}, "actions": [...] }],
-  "dialogues": [{ "slug": "...", "nodes": [{ "slug": "...", "playerResponses": [...] }] }]
+  "items": [{
+    "slug": "...",
+    "combinations": [{ "targetItemSlug": "...", "resultItemSlug": "...", "consumesSelf": false, "consumesTarget": true }],
+    "interactions": [{ "type": "examine", "conditionSlug": "...", "actions": [...] }]
+  }],
+  "triggers": [{ "slug": "...", "triggerType": "FlagChange", "conditionToFire": {...}, "actions": [...] }],
+  "dialogues": [{ "slug": "...", "nodes": [{ "slug": "...", "speakerId": "...", "text": "...", "playerResponses": [{ "text": "...", "conditionSlug": "...", "actionOnSelect": {...} }] }] }]
 }
 ```
 
@@ -118,18 +235,20 @@ service cloud.firestore {
 ├── js/
 │   ├── config.js           # Firebase credentials
 │   ├── db.js               # Firestore CRUD + helpers
-│   ├── ui.js               # Toasts, modals, render helpers
+│   ├── auth.js             # Login, registro, recovery de contraseña
+│   ├── ui.js               # Toasts, modals, combobox, quick create, breadcrumbs
 │   ├── router.js           # Hash-based SPA router
 │   ├── app.js              # Main entry + route registration
-│   ├── export.js           # Slug-based JSON export
+│   ├── export.js           # Slug-based JSON export con preview/download/copy
 │   └── modules/
-│       ├── rooms.js        # Habitaciones
-│       ├── characters.js   # Personajes
-│       ├── items.js        # Inventario & Flags
-│       ├── timeline.js     # Cronología / Triggers
-│       ├── dialogues.js    # Diálogos + nodos
-│       └── notes.js        # Notas Markdown con WYSIWYG
-└── assets/                 # Imágenes estáticas
+│       ├── rooms.js        # Habitaciones + hotspots + interacciones + acciones
+│       ├── characters.js   # Personajes con avatar, bio y diálogo por defecto
+│       ├── items.js        # Inventario + combinaciones + interacciones + flags
+│       ├── timeline.js     # Cronología / Triggers / Acciones contextuales
+│       ├── dialogues.js    # Diálogos + nodos + condiciones + acciones
+│       └── notes.js        # Notas Markdown con WYSIWYG, auto-save y export
+└── assets/
+    └── favicon.svg
 ```
 
 ## Licencia

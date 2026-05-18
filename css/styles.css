@@ -1965,3 +1965,229 @@ a:hover {
   color: var(--muted);
   font-size: 13px;
 }
+
+/* ---------- Dashboard ---------- */
+.dash-container {
+  max-width: 900px;
+}
+
+.dash-project-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  margin-bottom: 32px;
+  background-image:
+    radial-gradient(ellipse at 0% 0%, rgba(124, 92, 252, 0.06) 0%, transparent 60%);
+}
+
+.dash-project-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.dash-project-logo {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, var(--accent), #c77dff);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.dash-project-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.dash-project-name {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dash-project-name:hover {
+  color: var(--accent-hover);
+}
+
+.dash-project-type {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.dash-edit-name-btn {
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.dash-project-header:hover .dash-edit-name-btn {
+  opacity: 1;
+}
+
+.dash-name-input {
+  font-size: 22px !important;
+  font-weight: 700 !important;
+  padding: 6px 10px !important;
+}
+
+.dash-project-meta {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.dash-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.dash-meta-item i {
+  color: var(--accent);
+  font-size: 13px;
+}
+
+.dash-section {
+  margin-bottom: 32px;
+}
+
+.dash-section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+}
+
+.dash-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.dash-stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 20px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.dash-stat-card:hover {
+  border-color: var(--stat-color, var(--border-light));
+  background: var(--bg-card-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.dash-stat-icon {
+  font-size: 20px;
+  color: var(--stat-color, var(--accent));
+  margin-bottom: 8px;
+}
+
+.dash-stat-count {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.dash-stat-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.dash-recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dash-recent-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.dash-recent-item:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-light);
+}
+
+.dash-recent-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.dash-recent-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.dash-recent-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dash-recent-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.dash-recent-type {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  font-size: 10px;
+}
+
+.dash-recent-date {
+  color: var(--text-muted);
+}
+
+.dash-empty-recent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  text-align: center;
+}

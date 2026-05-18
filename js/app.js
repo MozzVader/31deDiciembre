@@ -8,6 +8,7 @@ import { renderItemsView, renderFlagsView, renderItemForm, renderFlagForm } from
 import { renderTimelineList, renderTimelineForm } from './modules/timeline.js';
 import { renderDialoguesList, renderDialogueDetail, renderDialogueForm } from './modules/dialogues.js';
 import { renderNotesList, renderNoteEditor } from './modules/notes.js';
+import { renderDashboard } from './modules/dashboard.js';
 import { exportProject } from './export.js';
 import { setActiveNav, closeModal } from './ui.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
@@ -50,6 +51,11 @@ function updateUserDisplay(user) {
 // ============================================
 // Register Routes
 // ============================================
+
+// Dashboard (home)
+registerRoute('', () => {
+  renderDashboard();
+});
 
 // Rooms
 registerRoute('rooms', ({ action }) => {

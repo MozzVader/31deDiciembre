@@ -18,7 +18,7 @@ export function registerRoute(path, handler) {
  * Parse the current hash into route + params
  */
 function parseHash() {
-  const hash = window.location.hash.slice(1) || 'rooms';
+  const hash = window.location.hash.slice(1) || '';
   const parts = hash.split('/');
   return {
     module: parts[0],
@@ -47,11 +47,9 @@ export function navigate() {
     return;
   }
 
-  // 404
+  // 404 — redirect to dashboard
   console.warn('No route found for:', hash);
-  if (routes['rooms']) {
-    routes['rooms']({ module: 'rooms', action: null, subaction: null });
-  }
+  window.location.hash = '';
 }
 
 // Listen for hash changes
@@ -59,8 +57,9 @@ window.addEventListener('hashchange', navigate);
 
 // Initial navigation
 export function initRouter() {
-  if (!window.location.hash) {
-    window.location.hash = 'rooms';
+  if (!window.location.hash || window.location.hash === '#') {
+    window.location.hash = '';
+    navigate();
   } else {
     navigate();
   }

@@ -129,7 +129,7 @@ export async function renderDashboard() {
         const hash = cfg.route + '/' + e.id;
         return `
           <div class="dash-recent-item" onclick="window.location.hash='${hash}'">
-            <div class="dash-recent-icon" style="color:${cfg.color};background:${cfg.color}18;">
+            <div class="dash-recent-icon" style="--icon-color:${cfg.color}">
               <i class="fa-solid ${cfg.icon}"></i>
             </div>
             <div class="dash-recent-info">

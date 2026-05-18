@@ -2153,6 +2153,8 @@ a:hover {
   justify-content: center;
   font-size: 15px;
   flex-shrink: 0;
+  color: var(--icon-color);
+  background: color-mix(in srgb, var(--icon-color) 10%, transparent);
 }
 
 .dash-recent-info {

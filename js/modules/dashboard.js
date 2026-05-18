@@ -53,7 +53,7 @@ export async function renderDashboard() {
       char:     { label: 'Personaje',  icon: 'fa-users',    color: 'var(--info)',    route: 'characters' },
       item:     { label: 'Item',       icon: 'fa-box-open', color: 'var(--warning)', route: 'items' },
       flag:     { label: 'Flag',       icon: 'fa-flag',     color: 'var(--danger)',  route: 'items/flags' },
-      trigger:  { label: 'Trigger',    icon: 'fa-clock',    color: '#c77dff',        route: 'timeline' },
+      trigger:  { label: 'Evento',     icon: 'fa-clock',    color: '#c77dff',        route: 'timeline' },
       dialogue: { label: 'Diálogo',    icon: 'fa-comments', color: 'var(--success)', route: 'dialogues' },
       note:     { label: 'Nota',       icon: 'fa-note-sticky', color: '#818cf8',     route: 'notes' }
     };
@@ -63,9 +63,9 @@ export async function renderDashboard() {
       ...characters.map(e => ({ ...e, _type: 'char', _name: e.name })),
       ...items.map(e => ({ ...e, _type: 'item',    _name: e.name })),
       ...flags.map(e => ({ ...e, _type: 'flag',    _name: e.name })),
-      ...triggers.map(e => ({ ...e, _type: 'trigger', _name: e.name })),
+      ...triggers.map(e => ({ ...e, _type: 'trigger', _name: e.eventName })),
       ...dialogues.map(e => ({ ...e, _type: 'dialogue', _name: e.name })),
-      ...notes.map(e => ({ ...e, _type: 'note',    _name: e.name }))
+      ...notes.map(e => ({ ...e, _type: 'note',    _name: e.title }))
     ];
 
     // Sort by updatedAt desc (fallback to createdAt)

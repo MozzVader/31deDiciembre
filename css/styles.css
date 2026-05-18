@@ -2042,6 +2042,12 @@ a:hover {
   padding: 6px 10px !important;
 }
 
+.dash-date-input {
+  font-size: 12px !important;
+  padding: 2px 6px !important;
+  width: 140px;
+}
+
 .dash-project-meta {
   display: flex;
   gap: 24px;

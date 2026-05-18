@@ -77,13 +77,20 @@ export async function renderDashboard() {
 
     const recentEntities = allEntities.slice(0, 8);
 
-    // Format dates
+    // "Creado" — from project meta (editable by user)
     const createdDate = meta.createdAt?.seconds
       ? formatFirestoreDate(meta.createdAt)
-      : 'No disponible';
-    const modifiedDate = meta.updatedAt?.seconds
-      ? formatFirestoreDate(meta.updatedAt)
-      : createdDate;
+      : 'No establecida';
+
+    // "Última modificación" — from most recently modified entity
+    let modifiedDate = 'Sin datos';
+    if (recentEntities.length > 0) {
+      const mostRecent = recentEntities[0];
+      const ts = mostRecent.updatedAt || mostRecent.createdAt;
+      if (ts?.seconds) {
+        modifiedDate = formatFirestoreDate(ts);
+      }
+    }
 
     // Build stats cards
     const stats = [
@@ -152,9 +159,10 @@ export async function renderDashboard() {
             </button>
           </div>
           <div class="dash-project-meta">
-            <div class="dash-meta-item">
+            <div class="dash-meta-item" id="dash-created-item" title="Clic para editar">
               <i class="fa-solid fa-calendar-plus"></i>
-              <span>Creado: ${createdDate}</span>
+              <span>Creado: <strong id="dash-created-date">${createdDate}</strong></span>
+              <button class="btn btn-ghost btn-sm" id="dash-edit-created-btn" style="padding:2px 4px;margin-left:-4px;"><i class="fa-solid fa-pen" style="font-size:10px;"></i></button>
             </div>
             <div class="dash-meta-item">
               <i class="fa-solid fa-calendar-pen"></i>
@@ -181,8 +189,9 @@ export async function renderDashboard() {
       </div>
     `);
 
-    // Attach edit project name handler
+    // Attach edit handlers
     setupProjectNameEdit(meta);
+    setupCreatedDateEdit(meta);
 
   } catch (err) {
     console.error('Dashboard error:', err);
@@ -297,6 +306,90 @@ function startEditProjectName(nameEl, meta) {
   input.addEventListener('blur', () => {
     saveName(input.value);
   });
+}
+
+// ============================================
+// Created Date Inline Edit
+// ============================================
+
+function setupCreatedDateEdit(meta) {
+  const itemEl = document.getElementById('dash-created-item');
+  const editBtn = document.getElementById('dash-edit-created-btn');
+  const dateEl = document.getElementById('dash-created-date');
+  if (!itemEl || !editBtn || !dateEl) return;
+
+  itemEl.style.cursor = 'pointer';
+
+  const startEdit = (e) => {
+    if (e) e.stopPropagation();
+    editCreatedDate(dateEl, editBtn, meta);
+  };
+
+  editBtn.addEventListener('click', startEdit);
+  itemEl.addEventListener('click', startEdit);
+}
+
+function editCreatedDate(dateEl, editBtn, meta) {
+  // Build a date input (type="date")
+  const input = document.createElement('input');
+  input.type = 'date';
+  input.className = 'form-input dash-date-input';
+
+  // Pre-fill with stored date or today
+  if (meta.createdAt?.seconds) {
+    const d = new Date(meta.createdAt.seconds * 1000);
+    input.value = d.toISOString().split('T')[0];
+  }
+
+  dateEl.replaceWith(input);
+  if (editBtn) editBtn.style.display = 'none';
+  input.focus();
+
+  const saveDate = async () => {
+    const val = input.value;
+    if (!val) {
+      // No date selected — restore
+      restoreCreatedDate(input, editBtn, 'No establecida', meta);
+      return;
+    }
+
+    try {
+      // Store as Firestore timestamp (midnight of selected date)
+      const dateObj = new Date(val + 'T00:00:00');
+      await updateProjectMeta({ createdAt: dateObj });
+      showToast('Fecha de creación actualizada', 'success');
+      const formatted = dateObj.toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' });
+      restoreCreatedDate(input, editBtn, formatted, { ...meta, createdAt: { seconds: Math.floor(dateObj.getTime() / 1000) } });
+    } catch (err) {
+      console.error('Error saving created date:', err);
+      showToast('Error al guardar la fecha', 'error');
+      const prevFormatted = meta.createdAt?.seconds
+        ? formatFirestoreDate(meta.createdAt)
+        : 'No establecida';
+      restoreCreatedDate(input, editBtn, prevFormatted, meta);
+    }
+  };
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); saveDate(); }
+    if (e.key === 'Escape') {
+      const prevFormatted = meta.createdAt?.seconds
+        ? formatFirestoreDate(meta.createdAt)
+        : 'No establecida';
+      restoreCreatedDate(input, editBtn, prevFormatted, meta);
+    }
+  });
+
+  input.addEventListener('blur', saveDate);
+}
+
+function restoreCreatedDate(input, editBtn, text, meta) {
+  const strong = document.createElement('strong');
+  strong.id = 'dash-created-date';
+  strong.textContent = text;
+  input.replaceWith(strong);
+  if (editBtn) editBtn.style.display = '';
+  setupCreatedDateEdit(meta);
 }
 
 // ============================================

@@ -2,7 +2,7 @@
 // Export Module — JSON for Visionaire
 // ============================================
 import { getAll, getNodes } from './db.js';
-import { showModal, closeModal, showToast, highlightJson } from './ui.js';
+import { showModal, closeModal, showToast, highlightJson } from '../ui.js';
 
 /**
  * Generate the full export JSON and show a preview.
@@ -13,13 +13,14 @@ export async function exportProject() {
 
   try {
     // Fetch everything in parallel
-    const [rooms, characters, items, flags, events, dialogues] = await Promise.all([
+    const [rooms, characters, items, flags, events, dialogues, audioTracks] = await Promise.all([
       getAll('rooms'),
       getAll('characters'),
       getAll('items'),
       getAll('flags'),
       getAll('timeline'),
-      getAll('dialogues')
+      getAll('dialogues'),
+      getAll('audio')
     ]);
 
     // Fetch all dialogue nodes
@@ -212,7 +213,17 @@ export async function exportProject() {
             }))
           }))
         };
-      })
+      }),
+
+      audio: audioTracks.map(track => ({
+        name: track.name || '',
+        category: track.category || '',
+        url: track.url || '',
+        duration: track.duration || '',
+        room: track.room || '',
+        tags: track.tags || [],
+        description: track.description || ''
+      }))
     };
 
     const jsonStr = JSON.stringify(exportData, null, 2);
@@ -222,7 +233,7 @@ export async function exportProject() {
     const body = `
       <div style="margin-bottom:12px;">
         <span class="text-xs text-muted">
-          <i class="fa-solid fa-box"></i> ${rooms.length} habitaciones, ${characters.length} personajes, ${items.length} items, ${flags.length} flags, ${events.length} triggers, ${dialogues.length} diálogos
+          <i class="fa-solid fa-box"></i> ${rooms.length} habitaciones, ${characters.length} personajes, ${items.length} items, ${flags.length} flags, ${events.length} triggers, ${dialogues.length} diálogos, ${audioTracks.length} pistas de audio
         </span>
       </div>
       <div class="json-preview" id="json-preview-content">${highlighted}</div>

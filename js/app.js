@@ -10,6 +10,7 @@ import { renderDialoguesList, renderDialogueDetail, renderDialogueForm } from '.
 import { renderNotesList, renderNoteEditor } from './modules/notes.js';
 import { renderSpriteSheetViewer } from './modules/spritesheet.js';
 import { renderMilestonesList, renderMilestoneForm } from './modules/milestones.js';
+import { renderAudioList, renderAudioForm } from './modules/audio.js';
 import { renderDashboard } from './modules/dashboard.js';
 import { initCommandPalette } from './modules/command-palette.js';
 import { exportProject } from './export.js';
@@ -114,6 +115,17 @@ registerRoute('dialogues', ({ action }) => {
     renderDialogueDetail(action);
   } else {
     renderDialoguesList();
+  }
+});
+
+// Audio
+registerRoute('audio', ({ action }) => {
+  if (action === 'new') {
+    renderAudioForm(null);
+  } else if (action) {
+    renderAudioForm(action);
+  } else {
+    renderAudioList();
   }
 });
 

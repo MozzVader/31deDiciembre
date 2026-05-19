@@ -11,6 +11,7 @@ import { renderNotesList, renderNoteEditor } from './modules/notes.js';
 import { renderSpriteSheetViewer } from './modules/spritesheet.js';
 import { renderMilestonesList, renderMilestoneForm } from './modules/milestones.js';
 import { renderDashboard } from './modules/dashboard.js';
+import { initCommandPalette } from './modules/command-palette.js';
 import { exportProject } from './export.js';
 import { setActiveNav, closeModal } from './ui.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
@@ -169,15 +170,22 @@ document.getElementById('modal-overlay').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) closeModal();
 });
 
-// Close modal on Escape
+// Close modal on Escape (only when command palette is not open)
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') closeModal();
+  if (e.key === 'Escape' && !document.getElementById('command-palette')?.classList.contains('visible')) {
+    closeModal();
+  }
 });
 
 // ============================================
 // Logout
 // ============================================
 setupLogout();
+
+// ============================================
+// Command Palette
+// ============================================
+initCommandPalette();
 
 // ============================================
 // NOTE: Router initializes AFTER auth check

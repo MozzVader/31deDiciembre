@@ -14,7 +14,7 @@ export async function renderDashboard() {
 
   try {
     // Fetch all data in parallel
-    const [meta, rooms, characters, items, flags, triggers, dialogues, notes, audioTracks] = await Promise.all([
+    const [meta, rooms, characters, items, flags, triggers, dialogues, notes, audioTracks, puzzles] = await Promise.all([
       getProjectMeta(),
       getAll('rooms'),
       getAll('characters'),
@@ -23,7 +23,8 @@ export async function renderDashboard() {
       getAll('timeline'),
       getAll('dialogues'),
       getAll('notes'),
-      getAll('audio')
+      getAll('audio'),
+      getAll('puzzles')
     ]);
 
     // Count dialogue nodes
@@ -42,6 +43,7 @@ export async function renderDashboard() {
     updateBadge('timeline', triggers.length);
     updateBadge('dialogues', dialogues.length);
     updateBadge('audio', audioTracks.length);
+    updateBadge('puzzles', puzzles.length);
 
     // Update sidebar project name
     const sidebarName = document.getElementById('project-name');
@@ -58,7 +60,8 @@ export async function renderDashboard() {
       trigger:  { label: 'Evento',     icon: 'fa-clock',    color: '#c77dff',        route: 'timeline' },
       dialogue: { label: 'Diálogo',    icon: 'fa-comments', color: 'var(--success)', route: 'dialogues' },
       note:     { label: 'Nota',       icon: 'fa-note-sticky', color: '#818cf8',     route: 'notes' },
-      audio:    { label: 'Audio',      icon: 'fa-headphones',  color: '#fb923c',     route: 'audio' }
+      audio:    { label: 'Audio',      icon: 'fa-headphones',  color: '#fb923c',     route: 'audio' },
+      puzzle:   { label: 'Puzzle',     icon: 'fa-puzzle-piece',color: '#f472b6',     route: 'puzzles' }
     };
 
     const allEntities = [
@@ -69,7 +72,8 @@ export async function renderDashboard() {
       ...triggers.map(e => ({ ...e, _type: 'trigger', _name: e.eventName })),
       ...dialogues.map(e => ({ ...e, _type: 'dialogue', _name: e.name })),
       ...notes.map(e => ({ ...e, _type: 'note',    _name: e.title })),
-      ...audioTracks.map(e => ({ ...e, _type: 'audio',  _name: e.name }))
+      ...audioTracks.map(e => ({ ...e, _type: 'audio',  _name: e.name })),
+      ...puzzles.map(e => ({ ...e, _type: 'puzzle', _name: e.name }))
     ];
 
     // Sort by updatedAt desc (fallback to createdAt)
@@ -106,7 +110,8 @@ export async function renderDashboard() {
       { key: 'dialogues',  label: 'Diálogos',     icon: 'fa-comments',      color: 'var(--success)', count: dialogues.length,  route: 'dialogues' },
       { key: 'notes',      label: 'Notas',        icon: 'fa-note-sticky',   color: '#818cf8',        count: notes.length,      route: 'notes' },
       { key: 'nodes',      label: 'Nodos',        icon: 'fa-sitemap',       color: '#f472b6',        count: nodeCount,         route: 'dialogues' },
-      { key: 'audio',      label: 'Audio',        icon: 'fa-headphones',    color: '#fb923c',        count: audioTracks.length, route: 'audio' }
+      { key: 'audio',      label: 'Audio',        icon: 'fa-headphones',    color: '#fb923c',        count: audioTracks.length, route: 'audio' },
+      { key: 'puzzles',    label: 'Puzzles',      icon: 'fa-puzzle-piece', color: '#f472b6',        count: puzzles.length,     route: 'puzzles' }
     ];
 
     const statsHtml = stats.map(s => `

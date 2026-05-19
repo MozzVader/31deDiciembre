@@ -11,6 +11,7 @@ import { renderNotesList, renderNoteEditor } from './modules/notes.js';
 import { renderSpriteSheetViewer } from './modules/spritesheet.js';
 import { renderMilestonesList, renderMilestoneForm } from './modules/milestones.js';
 import { renderAudioList, renderAudioForm } from './modules/audio.js';
+import { renderPuzzlesList, renderPuzzleForm } from './modules/puzzles.js';
 import { renderDashboard } from './modules/dashboard.js';
 import { initCommandPalette } from './modules/command-palette.js';
 import { exportProject } from './export.js';
@@ -115,6 +116,17 @@ registerRoute('dialogues', ({ action }) => {
     renderDialogueDetail(action);
   } else {
     renderDialoguesList();
+  }
+});
+
+// Puzzles
+registerRoute('puzzles', ({ action }) => {
+  if (action === 'new') {
+    renderPuzzleForm(null);
+  } else if (action) {
+    renderPuzzleForm(action);
+  } else {
+    renderPuzzlesList();
   }
 });
 

@@ -16,7 +16,8 @@ const ENTITY_TYPES = {
   dialogues:  { label: 'Diálogo',     icon: 'fa-comments',    color: 'var(--success)', nameField: 'name',      route: 'dialogues' },
   notes:      { label: 'Nota',        icon: 'fa-note-sticky', color: '#818cf8',        nameField: 'title',     route: 'notes' },
   milestones: { label: 'Hito',        icon: 'fa-trophy',      color: '#f472b6',        nameField: 'title',     route: 'milestones' },
-  audio:      { label: 'Audio',       icon: 'fa-headphones',  color: '#fb923c',        nameField: 'name',      route: 'audio' }
+  audio:      { label: 'Audio',       icon: 'fa-headphones',  color: '#fb923c',        nameField: 'name',      route: 'audio' },
+  puzzles:    { label: 'Puzzle',      icon: 'fa-puzzle-piece',color: '#f472b6',        nameField: 'name',      route: 'puzzles' }
 };
 
 // Quick actions
@@ -31,6 +32,7 @@ const QUICK_ACTIONS = [
   { id: 'go-spritesheet',   label: 'Ir a Sprite Viewer',       icon: 'fa-film',        color: '#fbbf24',        hash: '#spritesheet',   category: 'Navegar' },
   { id: 'go-milestones',    label: 'Ir a Hitos',               icon: 'fa-trophy',      color: '#f472b6',        hash: '#milestones',    category: 'Navegar' },
   { id: 'go-audio',         label: 'Ir a Biblioteca de Audio', icon: 'fa-headphones',  color: '#fb923c',        hash: '#audio',         category: 'Navegar' },
+  { id: 'go-puzzles',       label: 'Ir a Puzzle Designer',     icon: 'fa-puzzle-piece',color: '#f472b6',        hash: '#puzzles',       category: 'Navegar' },
   { id: 'new-room',         label: 'Nueva Habitación',         icon: 'fa-plus',        color: 'var(--accent)',  hash: '#rooms/new',     category: 'Crear' },
   { id: 'new-character',    label: 'Nuevo Personaje',          icon: 'fa-plus',        color: 'var(--info)',    hash: '#characters/new',category: 'Crear' },
   { id: 'new-item',         label: 'Nuevo Item',               icon: 'fa-plus',        color: 'var(--warning)', hash: '#items/new',     category: 'Crear' },
@@ -39,6 +41,7 @@ const QUICK_ACTIONS = [
   { id: 'new-note',         label: 'Nueva Nota',               icon: 'fa-plus',        color: '#818cf8',        hash: '#notes/new',     category: 'Crear' },
   { id: 'new-milestone',    label: 'Nuevo Hito',               icon: 'fa-plus',        color: '#f472b6',        hash: '#milestones/new',category: 'Crear' },
   { id: 'new-audio',        label: 'Nueva Pista de Audio',      icon: 'fa-plus',        color: '#fb923c',        hash: '#audio/new',     category: 'Crear' },
+  { id: 'new-puzzle',       label: 'Nuevo Puzzle',             icon: 'fa-plus',        color: '#f472b6',        hash: '#puzzles/new',   category: 'Crear' },
   { id: 'export-json',      label: 'Exportar JSON',            icon: 'fa-file-export', color: '#a78bfa',        hash: '__export__',     category: 'Acciones' },
 ];
 

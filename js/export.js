@@ -13,14 +13,15 @@ export async function exportProject() {
 
   try {
     // Fetch everything in parallel
-    const [rooms, characters, items, flags, events, dialogues, audioTracks] = await Promise.all([
+    const [rooms, characters, items, flags, events, dialogues, audioTracks, puzzles] = await Promise.all([
       getAll('rooms'),
       getAll('characters'),
       getAll('items'),
       getAll('flags'),
       getAll('timeline'),
       getAll('dialogues'),
-      getAll('audio')
+      getAll('audio'),
+      getAll('puzzles')
     ]);
 
     // Fetch all dialogue nodes
@@ -223,6 +224,32 @@ export async function exportProject() {
         room: track.room || '',
         tags: track.tags || [],
         description: track.description || ''
+      })),
+
+      puzzles: puzzles.map(puzzle => ({
+        name: puzzle.name || '',
+        description: puzzle.description || '',
+        difficulty: puzzle.difficulty || '',
+        status: puzzle.status || '',
+        room: puzzle.room || '',
+        tags: puzzle.tags || [],
+        steps: (puzzle.steps || []).map(step => ({
+          name: step.name || '',
+          type: step.type || '',
+          description: step.description || '',
+          requiredItems: step.requiredItems || [],
+          requiredFlags: step.requiredFlags || [],
+          resultItem: step.resultItem || '',
+          hints: step.hints || [],
+          alternativePaths: (step.alternativePaths || []).map(alt => ({
+            name: alt.name || '',
+            description: alt.description || '',
+            requiredItems: alt.requiredItems || [],
+            requiredFlags: alt.requiredFlags || [],
+            note: alt.note || ''
+          }))
+        })),
+        reward: puzzle.reward || null
       }))
     };
 
@@ -233,7 +260,7 @@ export async function exportProject() {
     const body = `
       <div style="margin-bottom:12px;">
         <span class="text-xs text-muted">
-          <i class="fa-solid fa-box"></i> ${rooms.length} habitaciones, ${characters.length} personajes, ${items.length} items, ${flags.length} flags, ${events.length} triggers, ${dialogues.length} diálogos, ${audioTracks.length} pistas de audio
+          <i class="fa-solid fa-box"></i> ${rooms.length} habitaciones, ${characters.length} personajes, ${items.length} items, ${flags.length} flags, ${events.length} triggers, ${dialogues.length} diálogos, ${audioTracks.length} pistas de audio, ${puzzles.length} puzzles
         </span>
       </div>
       <div class="json-preview" id="json-preview-content">${highlighted}</div>

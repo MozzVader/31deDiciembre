@@ -19,61 +19,196 @@ window.cycleNoteStatus = async function(noteId, currentStatus) {
   const nextStatus = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
   await update('notes', noteId, { status: nextStatus });
   showToast(`${STATUS_LABELS[nextStatus]}`, 'success');
-  renderNotesList(); // re-render para ver el cambio
+  renderNotesList();
+};
+
+// ============================================
+// To-Do List — Global handlers
+// ============================================
+
+window.addTodo = async function() {
+  const input = document.getElementById('todo-new-input');
+  const text = input?.value.trim();
+  if (!text) return;
+  input.value = '';
+  input.focus();
+  try {
+    await create('todos', { text, completed: false });
+    renderNotesList();
+  } catch (err) {
+    showToast('Error al crear tarea', 'error');
+  }
+};
+
+window.toggleTodo = async function(todoId, completed) {
+  try {
+    await update('todos', todoId, { completed: !completed });
+    renderNotesList();
+  } catch (err) {
+    showToast('Error al actualizar tarea', 'error');
+  }
+};
+
+window.deleteTodo = async function(todoId) {
+  try {
+    await remove('todos', todoId);
+    renderNotesList();
+  } catch (err) {
+    showToast('Error al eliminar tarea', 'error');
+  }
+};
+
+window.editTodo = async function(todoId, currentText) {
+  const itemEl = document.querySelector(`[data-todo-id="${todoId}"] .todo-text`);
+  if (!itemEl) return;
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'form-input todo-edit-input';
+  input.value = currentText;
+  itemEl.replaceWith(input);
+  input.focus();
+  input.select();
+
+  const save = async () => {
+    const newText = input.value.trim();
+    if (!newText || newText === currentText) {
+      renderNotesList();
+      return;
+    }
+    try {
+      await update('todos', todoId, { text: newText });
+      renderNotesList();
+    } catch (err) {
+      showToast('Error al editar', 'error');
+      renderNotesList();
+    }
+  };
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); save(); }
+    if (e.key === 'Escape') renderNotesList();
+  });
+  input.addEventListener('blur', save);
+};
+
+window.clearCompletedTodos = async function() {
+  const todos = await getAll('todos');
+  const completed = todos.filter(t => t.completed);
+  if (completed.length === 0) return;
+  const ok = await confirm(`¿Limpiar ${completed.length} tarea${completed.length !== 1 ? 's' : ''} completada${completed.length !== 1 ? 's' : ''}?`);
+  if (!ok) return;
+  try {
+    await Promise.all(completed.map(t => remove('todos', t.id)));
+    showToast(`${completed.length} tarea${completed.length !== 1 ? 's' : ''} eliminada${completed.length !== 1 ? 's' : ''}`, 'success');
+    renderNotesList();
+  } catch (err) {
+    showToast('Error al limpiar', 'error');
+  }
 };
 
 export async function renderNotesList() {
   setBreadcrumbs([{ label: 'Notas Sueltas' }]);
-  const notes = await getAll('notes');
+  const [notes, todos] = await Promise.all([getAll('notes'), getAll('todos')]);
 
-  if (notes.length === 0) {
-    renderWorkspace(`
-      <div class="workspace-header">
-        <div>
-          <h1 class="workspace-title">Notas Sueltas</h1>
-          <p class="workspace-subtitle">Para anotar ideas a las 3 AM</p>
+  // ---- Notes section ----
+  let notesHtml = '';
+  if (notes.length > 0) {
+    const cards = notes.map(note => {
+      const preview = (note.content || '').slice(0, 120).replace(/[#*_`]/g, '');
+      const date = note.updatedAt ? new Date(note.updatedAt.seconds * 1000).toLocaleDateString('es-AR') : '';
+      const status = note.status || 'nueva';
+      return `
+        <div class="card" onclick="window.location.hash='notes/${note.id}'">
+          <div class="card-meta" style="margin-top:0;margin-bottom:8px;">
+            <span class="card-badge note-status-${status} note-status-badge"
+                  onclick="event.stopPropagation(); cycleNoteStatus('${note.id}', '${status}')"
+                  title="Click para cambiar estado">
+              ${STATUS_LABELS[status] || STATUS_LABELS.nueva}
+            </span>
+            <span>${date}</span>
+          </div>
+          <div class="card-title">${escapeHtml(note.title || 'Sin título')}</div>
+          <div class="card-description">${escapeHtml(preview)}</div>
         </div>
-        <button class="btn btn-primary" onclick="window.location.hash='notes/new'">+ Nueva Nota</button>
-      </div>
-      <div class="empty-state">
-        <div class="empty-state-icon"><i class="fa-solid fa-pen-to-square" style="font-size:48px;"></i></div>
+      `;
+    }).join('');
+    notesHtml = `<div class="card-grid">${cards}</div>`;
+  } else {
+    notesHtml = `
+      <div class="empty-state" style="padding:32px;">
+        <div class="empty-state-icon"><i class="fa-solid fa-pen-to-square" style="font-size:36px;"></i></div>
         <div class="empty-state-title">No hay notas todavía</div>
         <div class="empty-state-text">Un dump de ideas sin estructura. Markdown friendly. Para cuando te despiertás a las 3 AM con una idea genial.</div>
         <button class="btn btn-primary" onclick="window.location.hash='notes/new'">+ Crear Nota</button>
-      </div>
-    `);
-    return;
+      </div>`;
   }
 
-  const cards = notes.map(note => {
-    const preview = (note.content || '').slice(0, 120).replace(/[#*_`]/g, '');
-    const date = note.updatedAt ? new Date(note.updatedAt.seconds * 1000).toLocaleDateString('es-AR') : '';
-    const status = note.status || 'nueva';
-    return `
-      <div class="card" onclick="window.location.hash='notes/${note.id}'">
-        <div class="card-meta" style="margin-top:0;margin-bottom:8px;">
-          <span class="card-badge note-status-${status} note-status-badge"
-                onclick="event.stopPropagation(); cycleNoteStatus('${note.id}', '${status}')"
-                title="Click para cambiar estado">
-            ${STATUS_LABELS[status] || STATUS_LABELS.nueva}
-          </span>
-          <span>${date}</span>
-        </div>
-        <div class="card-title">${escapeHtml(note.title || 'Sin título')}</div>
-        <div class="card-description">${escapeHtml(preview)}</div>
-      </div>
-    `;
-  }).join('');
+  // ---- To-Do section ----
+  const pending = todos.filter(t => !t.completed);
+  const completed = todos.filter(t => t.completed);
+  const totalTodos = todos.length;
+  const doneTodos = completed.length;
 
+  let todoListHtml = '';
+  if (totalTodos > 0) {
+    const todoItemsHtml = todos
+      .sort((a, b) => {
+        // Pending first, then by createdAt desc
+        if (a.completed !== b.completed) return a.completed ? 1 : -1;
+        return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
+      })
+      .map(t => {
+        const checkedClass = t.completed ? 'todo-checked' : '';
+        const checkIcon = t.completed ? 'fa-solid fa-square-check' : 'fa-regular fa-square';
+        return `
+          <div class="todo-item ${checkedClass}" data-todo-id="${t.id}">
+            <button class="todo-check" onclick="toggleTodo('${t.id}', ${t.completed})" title="Marcar como ${t.completed ? 'pendiente' : 'completada'}">
+              <i class="${checkIcon}"></i>
+            </button>
+            <span class="todo-text" ondblclick="editTodo('${t.id}', '${escapeHtml(t.text).replace(/'/g, "\\'")}')" title="Doble clic para editar">${escapeHtml(t.text)}</span>
+            <button class="todo-delete" onclick="deleteTodo('${t.id}')" title="Eliminar"><i class="fa-solid fa-xmark"></i></button>
+          </div>`;
+      }).join('');
+
+    todoListHtml = `<div class="todo-list">${todoItemsHtml}</div>`;
+  }
+
+  const todoHeader = `
+    <div class="todo-header">
+      <div class="todo-header-left">
+        <span class="todo-header-title"><i class="fa-solid fa-list-check"></i> To-Do</span>
+        ${totalTodos > 0
+          ? `<span class="todo-counter">${doneTodos}/${totalTodos}</span>
+             <div class="todo-progress-bar"><div class="todo-progress-fill" style="width:${totalTodos > 0 ? Math.round((doneTodos / totalTodos) * 100) : 0}%"></div></div>`
+          : ''}
+      </div>
+      ${doneTodos > 0
+        ? `<button class="btn btn-ghost btn-sm" onclick="clearCompletedTodos()" title="Limpiar completadas"><i class="fa-solid fa-broom"></i> Limpiar</button>`
+        : ''}
+    </div>`;
+
+  const todoSection = `
+    <div class="todo-section">
+      ${todoHeader}
+      <div class="todo-input-row">
+        <input type="text" class="form-input" id="todo-new-input" placeholder="Escribí una tarea y presioná Enter..." onkeydown="if(event.key==='Enter'){event.preventDefault();addTodo();}">
+        <button class="btn btn-primary btn-sm" onclick="addTodo()"><i class="fa-solid fa-plus"></i></button>
+      </div>
+      ${todoListHtml || `<div class="todo-empty">Sin tareas pendientes. Agregá una arriba.</div>`}
+    </div>`;
+
+  // ---- Render ----
   renderWorkspace(`
     <div class="workspace-header">
       <div>
         <h1 class="workspace-title">Notas Sueltas</h1>
-        <p class="workspace-subtitle">${notes.length} nota${notes.length !== 1 ? 's' : ''}</p>
+        <p class="workspace-subtitle">${notes.length} nota${notes.length !== 1 ? 's' : ''} &middot; ${totalTodos} tarea${totalTodos !== 1 ? 's' : ''}</p>
       </div>
       <button class="btn btn-primary" onclick="window.location.hash='notes/new'">+ Nueva Nota</button>
     </div>
-    <div class="card-grid">${cards}</div>
+    ${notesHtml}
+    ${todoSection}
   `);
 }
 

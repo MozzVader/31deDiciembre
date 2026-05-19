@@ -2399,3 +2399,162 @@ a:hover {
   image-rendering: crisp-edges;
   max-width: 100%;
 }
+
+/* ============================================
+   Milestones — Vertical Timeline
+   ============================================ */
+
+.ms-timeline {
+  position: relative;
+  max-width: 750px;
+  padding-left: 48px;
+}
+
+/* Vertical line */
+.ms-timeline::before {
+  content: '';
+  position: absolute;
+  left: 18px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: var(--border);
+  border-radius: 1px;
+}
+
+/* Single timeline item */
+.ms-timeline-item {
+  position: relative;
+  padding-bottom: 32px;
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  cursor: pointer;
+}
+
+.ms-timeline-item:last-child {
+  padding-bottom: 0;
+}
+
+/* Dot / Node */
+.ms-timeline-dot {
+  position: absolute;
+  left: -48px;
+  top: 4px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid;
+  flex-shrink: 0;
+  z-index: 1;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.ms-timeline-item:hover .ms-timeline-dot {
+  transform: scale(1.15);
+  box-shadow: 0 0 12px var(--border-light);
+}
+
+/* Card */
+.ms-timeline-card {
+  flex: 1;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  transition: all var(--transition-fast);
+  min-width: 0;
+}
+
+.ms-timeline-item:hover .ms-timeline-card {
+  border-color: var(--border-light);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Card header: date + category */
+.ms-timeline-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.ms-timeline-date {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--bg-main);
+  padding: 2px 10px;
+  border-radius: 99px;
+}
+
+.ms-timeline-cat {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 99px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Title */
+.ms-timeline-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+/* Description */
+.ms-timeline-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+/* Image in timeline card */
+.ms-timeline-img {
+  margin-top: 8px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  max-height: 220px;
+}
+
+.ms-timeline-img img {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  display: block;
+  border-radius: var(--radius);
+}
+
+/* ============================================
+   Milestone Form — Image area
+   ============================================ */
+
+.ms-form-image-area {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ms-form-img-preview {
+  max-width: 100%;
+  max-height: 240px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.ms-form-image-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}

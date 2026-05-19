@@ -9,6 +9,7 @@ import { renderTimelineList, renderTimelineForm } from './modules/timeline.js';
 import { renderDialoguesList, renderDialogueDetail, renderDialogueForm } from './modules/dialogues.js';
 import { renderNotesList, renderNoteEditor } from './modules/notes.js';
 import { renderSpriteSheetViewer } from './modules/spritesheet.js';
+import { renderMilestonesList, renderMilestoneForm } from './modules/milestones.js';
 import { renderDashboard } from './modules/dashboard.js';
 import { exportProject } from './export.js';
 import { setActiveNav, closeModal } from './ui.js';
@@ -133,6 +134,17 @@ registerRoute('notes', ({ action }) => {
 
 // Sprite Sheet Viewer
 registerRoute('spritesheet', () => renderSpriteSheetViewer());
+
+// Milestones
+registerRoute('milestones', ({ action }) => {
+  if (action === 'new') {
+    renderMilestoneForm(null);
+  } else if (action) {
+    renderMilestoneForm(action);
+  } else {
+    renderMilestonesList();
+  }
+});
 
 // ============================================
 // Sidebar Navigation

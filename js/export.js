@@ -2,7 +2,7 @@
 // Export Module — JSON for Visionaire
 // ============================================
 import { getAll, getNodes } from './db.js';
-import { showModal, closeModal, showToast, highlightJson } from '../ui.js';
+import { showModal, closeModal, showToast, highlightJson } from './ui.js';
 
 /**
  * Generate the full export JSON and show a preview.

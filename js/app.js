@@ -8,6 +8,7 @@ import { renderItemsView, renderFlagsView, renderItemForm, renderFlagForm } from
 import { renderTimelineList, renderTimelineForm } from './modules/timeline.js';
 import { renderDialoguesList, renderDialogueDetail, renderDialogueForm } from './modules/dialogues.js';
 import { renderNotesList, renderNoteEditor } from './modules/notes.js';
+import { renderSpriteSheetViewer } from './modules/spritesheet.js';
 import { renderDashboard } from './modules/dashboard.js';
 import { exportProject } from './export.js';
 import { setActiveNav, closeModal } from './ui.js';
@@ -53,9 +54,8 @@ function updateUserDisplay(user) {
 // ============================================
 
 // Dashboard (home)
-registerRoute('', () => {
-  renderDashboard();
-});
+registerRoute('', () => renderDashboard());
+registerRoute('dashboard', () => renderDashboard());
 
 // Rooms
 registerRoute('rooms', ({ action }) => {
@@ -130,6 +130,9 @@ registerRoute('notes', ({ action }) => {
     renderNotesList();
   }
 });
+
+// Sprite Sheet Viewer
+registerRoute('spritesheet', () => renderSpriteSheetViewer());
 
 // ============================================
 // Sidebar Navigation

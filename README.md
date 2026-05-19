@@ -1,9 +1,9 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.3-blue?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/version-1.4-blue?style=for-the-badge" alt="Version">
   <img src="https://img.shields.io/badge/license-CC%20BY--NC--ND%204.0-lightgrey?style=for-the-badge" alt="License">
   <img src="https://img.shields.io/badge/status-en%20desarrollo-orange?style=for-the-badge" alt="Status">
-  <img src="https://img.shields.io/badge/commits-35-green?style=for-the-badge" alt="Commits">
-  <img src="https://img.shields.io/badge/LOC-7.400%2B-blueviolet?style=for-the-badge" alt="Lines of Code">
+  <img src="https://img.shields.io/badge/commits-43-green?style=for-the-badge" alt="Commits">
+  <img src="https://img.shields.io/badge/LOC-9.400%2B-blueviolet?style=for-the-badge" alt="Lines of Code">
 </p>
 
 <h1 align="center">31 de Diciembre — Adventure Design Toolbox</h1>
@@ -47,12 +47,25 @@ Todo el flujo de autenticación se maneja en un screen dedicado antes de acceder
 
 | Icono | Módulo | Descripción |
 |:-----:|--------|-------------|
-| 🏠 | **Habitaciones** | Espacios físicos con salidas direccionales, condiciones de desbloqueo y sistema completo de hotspots interactivos |
+| 🏠 | **Dashboard** | Página de inicio con resumen del proyecto, estadísticas clickeables y últimas ediciones |
+| 🗺️ | **Habitaciones** | Espacios físicos con salidas direccionales, condiciones de desbloqueo y sistema completo de hotspots interactivos |
 | 👥 | **Personajes** | NPCs con bio, rol, ubicación inicial, avatar y diálogo por defecto |
 | 🎯 | **Inventario & Flags** | Items combinables con sistema `consumesSelf` / `consumesTarget`, interacciones propias y variables de estado |
 | ⏱️ | **Cronología** | Timeline de eventos con triggers condicionales y acciones contextuales |
 | 💬 | **Diálogos** | Árboles de diálogo con nodos, respuestas del jugador, condiciones y acciones |
-| 📝 | **Notas Sueltas** | Editor Markdown con toolbar WYSIWYG, preview en vivo, auto-save y badges de estado |
+| 📝 | **Notas Sueltas** | Editor Markdown con toolbar WYSIWYG, preview en vivo, auto-save, badges de estado y To-Do list integrada |
+| 🎬 | **Sprite Viewer** | Visor/probador de spritesheets con controles de grilla, velocidad, zoom y selector de dirección |
+| 🏆 | **Hitos del Proyecto** | Línea temporal vertical con milestones categorizados (Arte, Código, Diseño, Historia, General) |
+
+### Dashboard
+
+Página de inicio por defecto al abrir el proyecto. Incluye:
+
+- **Nombre del proyecto** editable inline (clic para editar, Enter para guardar)
+- **Fecha de creación** editable con date picker (se guarda una vez y queda fija)
+- **Última modificación** calculada automáticamente a partir de la entidad más recientemente editada
+- **Tarjetas de estadísticas**: contadores clickeables para cada módulo (habitaciones, personajes, items, flags, triggers, diálogos, notas, nodos) que navegan al módulo correspondiente
+- **Últimas ediciones**: listado de las 8 entidades más recientemente modificadas, con badges de tipo coloridos y enlaces directos
 
 ### Habitaciones — Hotspots
 
@@ -106,13 +119,44 @@ Y **6 tipos de acciones** con dropdowns contextuales que cambian según el tipo:
 
 ### Notas Sueltas
 
-Editor de notas con funcionalidades avanzadas:
+Editor de notas con funcionalidades avanzadas, dividido en dos secciones:
 
+**Tarjetas de notas** (arriba):
 - **Toolbar WYSIWYG**: negrita, cursiva, links, imágenes, code blocks, listas
 - **Preview en vivo** que renderiza Markdown en tiempo real
 - **Auto-save** con debounce de 2 segundos
 - **Exportar como .md** — descarga directa del archivo Markdown
 - **Badges de estado**: Nueva → En Progreso → Completada (clic para ciclar)
+
+**To-Do List** (abajo):
+- **Agregar tareas**: input inline + Enter
+- **Check/Uncheck**: clic en el checkbox, las completadas van al final con tachado
+- **Editar inline**: doble clic en el texto para editar, Enter para guardar, Escape para cancelar
+- **Eliminar**: botón × que aparece al pasar el mouse
+- **Barra de progreso** con contador X/Y completadas
+- **Limpiar**: botón para eliminar todas las tareas completadas de una
+- Tareas almacenadas en Firestore (subcolección `todos`)
+
+### Sprite Viewer
+
+Herramienta para probar spritesheets de personajes en tiempo real:
+
+- **Upload de imagen** desde disco (drag & drop o selector), se procesa localmente sin persistir
+- **Controles configurables**: columnas, filas, FPS (1-60) y zoom (1x a 8x)
+- **Play/Pause**, frame anterior/siguiente, reset y slider para navegar frames
+- **Selector de dirección**: botones para reproducir una fila individual (Abajo, Izquierda, Derecha, Arriba) o "Todas" para reproducir el sheet completo
+- **Vista previa del sheet** con grilla superpuesta y escala automática
+- **Panel de info**: nombre del archivo, tamaño de imagen, tamaño de frame, total de frames, frame actual
+
+### Hitos del Proyecto
+
+Línea temporal vertical para registrar los momentos importantes del desarrollo:
+
+- **Timeline visual** con línea vertical, nodos circulares coloridos y cards con fecha, título, descripción e imagen
+- **5 categorías** con colores e íconos: Arte, Código, Diseño, Historia, General
+- **Imagen adjunta** opcional (upload desde disco o URL) — ideal para screenshots del estado del juego
+- Ordenado por fecha descendente (más reciente primero)
+- CRUD completo: crear, editar, eliminar hitos
 
 ## Features de UX
 
@@ -133,6 +177,8 @@ Todos los dropdowns principales se reemplazan por **comboboxes custom** con bús
 
 - **Habitaciones**: imagen de fondo con upload desde disco (FileReader → base64), URL o botón para limpiar. Thumbnails en la grilla de tarjetas.
 - **Personajes**: avatar circular con el mismo sistema de upload/URL/clear.
+- **Hitos**: imagen adjunta opcional con upload desde disco o URL.
+- **Sprite Viewer**: imagen cargada localmente desde disco, no se persiste.
 
 ### Slugs
 
@@ -246,7 +292,10 @@ service cloud.firestore {
 │       ├── items.js        # Inventario + combinaciones + interacciones + flags
 │       ├── timeline.js     # Cronología / Triggers / Acciones contextuales
 │       ├── dialogues.js    # Diálogos + nodos + condiciones + acciones
-│       └── notes.js        # Notas Markdown con WYSIWYG, auto-save y export
+│       ├── notes.js        # Notas Markdown + To-Do list integrada
+│       ├── dashboard.js    # Página de inicio con resumen y estadísticas
+│       ├── spritesheet.js  # Visor/probador de spritesheets animados
+│       └── milestones.js   # Hitos del proyecto (timeline vertical de desarrollo)
 └── assets/
     └── favicon.svg
 ```

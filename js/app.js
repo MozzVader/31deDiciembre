@@ -39,16 +39,11 @@ onAuthStateChanged(auth, (user) => {
 });
 
 function updateUserDisplay(user) {
-  let userEl = document.getElementById('topbar-user');
-  if (!userEl) {
-    // Insert user info into topbar actions
-    const topbarActions = document.getElementById('topbar-actions');
-    userEl = document.createElement('div');
-    userEl.id = 'topbar-user';
-    userEl.className = 'topbar-user';
-    topbarActions.insertBefore(userEl, topbarActions.firstChild);
+  const emailEl = document.getElementById('sidebar-email');
+  if (emailEl) {
+    emailEl.textContent = user.email;
+    emailEl.title = user.email;
   }
-  userEl.innerHTML = `<span class="topbar-user-email" title="${user.email}">${user.email}</span>`;
 }
 
 // ============================================

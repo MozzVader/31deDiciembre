@@ -1644,24 +1644,34 @@ a:hover {
   margin-left: 4px;
 }
 
-/* ---------- User Info in Topbar ---------- */
-.topbar-user {
+/* ---------- User Info in Sidebar Footer ---------- */
+.sidebar-footer-user {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
-  color: var(--text-muted);
-  padding: 4px 10px;
-  background: var(--bg-card);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
+  padding: 0 2px;
+  margin-bottom: 8px;
 }
 
-.topbar-user-email {
-  max-width: 160px;
+.sidebar-footer-email {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.sidebar-footer-user .btn-logout {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  transition: color var(--transition-fast);
+}
+
+.sidebar-footer-user .btn-logout:hover {
+  color: var(--danger);
 }
 
 /* ---------- Form Section Divider ---------- */

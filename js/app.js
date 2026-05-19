@@ -12,6 +12,7 @@ import { renderSpriteSheetViewer } from './modules/spritesheet.js';
 import { renderMilestonesList, renderMilestoneForm } from './modules/milestones.js';
 import { renderAudioList, renderAudioForm } from './modules/audio.js';
 import { renderPuzzlesList, renderPuzzleForm } from './modules/puzzles.js';
+import { renderVisualMap } from './modules/visualmap.js';
 import { renderDashboard } from './modules/dashboard.js';
 import { initCommandPalette } from './modules/command-palette.js';
 import { exportProject } from './export.js';
@@ -118,6 +119,9 @@ registerRoute('dialogues', ({ action }) => {
     renderDialoguesList();
   }
 });
+
+// Visual Map
+registerRoute('visualmap', () => renderVisualMap());
 
 // Puzzles
 registerRoute('puzzles', ({ action }) => {

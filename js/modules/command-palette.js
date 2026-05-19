@@ -24,6 +24,7 @@ const ENTITY_TYPES = {
 const QUICK_ACTIONS = [
   { id: 'go-dashboard',     label: 'Ir al Dashboard',          icon: 'fa-house',       color: 'var(--accent)',  hash: '#dashboard',     category: 'Navegar' },
   { id: 'go-rooms',         label: 'Ir a Habitaciones',        icon: 'fa-map',         color: 'var(--accent)',  hash: '#rooms',         category: 'Navegar' },
+  { id: 'go-visualmap',     label: 'Ir a Mapa Visual',         icon: 'fa-diagram-project', color: '#34d399',        hash: '#visualmap',     category: 'Navegar' },
   { id: 'go-characters',    label: 'Ir a Personajes',          icon: 'fa-users',       color: 'var(--info)',    hash: '#characters',    category: 'Navegar' },
   { id: 'go-items',         label: 'Ir a Inventario & Flags',  icon: 'fa-box-open',    color: 'var(--warning)', hash: '#items',         category: 'Navegar' },
   { id: 'go-timeline',      label: 'Ir a Cronología',          icon: 'fa-clock',       color: '#c77dff',        hash: '#timeline',      category: 'Navegar' },

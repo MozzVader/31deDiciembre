@@ -34,11 +34,21 @@ const STEP_TYPES = [
 
 let activeFilter = 'all';
 
+// Auto-save state
+let autoSaveTimer = null;
+let autoSavePuzzleId = null;
+let autoSaveDirty = false;
+let lastAutoSaveTime = 0;
+const AUTO_SAVE_INTERVAL = 60000; // 1 minute
+
 // ============================================
 // List View
 // ============================================
 
 export async function renderPuzzlesList() {
+  // Clear any active auto-save when leaving the form
+  clearAutoSave();
+
   setBreadcrumbs([{ label: 'Puzzles' }]);
   renderWorkspace('<div class="loading"><div class="spinner"></div></div>');
 
@@ -220,6 +230,9 @@ export async function renderPuzzleForm(puzzleId = null) {
           </button>
           <input type="text" class="puzzle-name-input" id="puzzle-name" value="${escapeHtml(puzzle?.name || '')}" placeholder="Nombre del puzzle...">
           <div class="detail-actions">
+            <span class="autosave-indicator" id="autosave-indicator" style="display:none;">
+              <i class="fa-solid fa-rotate fa-spin" style="font-size:11px;"></i> Guardando...
+            </span>
             <button class="btn btn-ghost btn-sm" id="btn-save-puzzle" title="Guardar">
               <i class="fa-solid fa-floppy-disk"></i> Guardar
             </button>
@@ -332,6 +345,9 @@ export async function renderPuzzleForm(puzzleId = null) {
 
     // Bind step events
     bindStepEvents();
+
+    // Setup auto-save
+    setupAutoSave(puzzleId);
 
   } catch (err) {
     console.error('Puzzle form error:', err);
@@ -801,7 +817,98 @@ function showAltPathModal(existingAlt, onSave) {
 }
 
 // ============================================
-// Save Puzzle
+// Auto-Save (every 60s when editing an existing puzzle)
+// ============================================
+
+function setupAutoSave(puzzleId) {
+  // Clear any existing timer
+  clearAutoSave();
+
+  if (!puzzleId) {
+    // New puzzle — no auto-save until first manual save
+    autoSavePuzzleId = null;
+    return;
+  }
+
+  autoSavePuzzleId = puzzleId;
+  autoSaveDirty = false;
+  lastAutoSaveTime = Date.now();
+
+  // Mark dirty on any input change
+  const formContainer = document.querySelector('.puzzle-form-container');
+  if (formContainer) {
+    formContainer.addEventListener('input', markDirty);
+    formContainer.addEventListener('change', markDirty);
+  }
+
+  // Start interval
+  autoSaveTimer = setInterval(() => {
+    if (autoSaveDirty && autoSavePuzzleId) {
+      autoSavePuzzle(autoSavePuzzleId);
+    }
+  }, AUTO_SAVE_INTERVAL);
+}
+
+function markDirty() {
+  autoSaveDirty = true;
+}
+
+function clearAutoSave() {
+  if (autoSaveTimer) {
+    clearInterval(autoSaveTimer);
+    autoSaveTimer = null;
+  }
+  autoSavePuzzleId = null;
+  autoSaveDirty = false;
+}
+
+async function autoSavePuzzle(puzzleId) {
+  // Don't auto-save if name is empty
+  const nameEl = document.getElementById('puzzle-name');
+  if (!nameEl || !nameEl.value.trim()) return;
+
+  // Show saving indicator
+  const indicator = document.getElementById('autosave-indicator');
+  if (indicator) indicator.style.display = 'inline-flex';
+
+  try {
+    const puzzleData = getCurrentPuzzleFromForm();
+    const tagsRaw = document.getElementById('puzzle-tags').value;
+    const tags = tagsRaw ? tagsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+    const rewardType = document.getElementById('puzzle-reward-type').value;
+    const rewardSlug = document.getElementById('puzzle-reward-slug').value.trim();
+    const rewardDesc = document.getElementById('puzzle-reward-desc').value.trim();
+
+    const data = {
+      name: nameEl.value.trim(),
+      description: document.getElementById('puzzle-description').value.trim(),
+      difficulty: document.getElementById('puzzle-difficulty').value,
+      status: document.getElementById('puzzle-status').value,
+      room: document.getElementById('puzzle-room').value,
+      tags,
+      steps: puzzleData.steps,
+      reward: rewardType ? {
+        type: rewardType,
+        slug: rewardSlug,
+        description: rewardDesc
+      } : null
+    };
+
+    await update('puzzles', puzzleId, data);
+    autoSaveDirty = false;
+    lastAutoSaveTime = Date.now();
+    showToast('Autoguardado', 'info');
+  } catch (err) {
+    console.error('Auto-save error:', err);
+    // Silent fail — don't disrupt the user
+  } finally {
+    // Hide saving indicator
+    if (indicator) indicator.style.display = 'none';
+  }
+}
+
+// ============================================
+// Save Puzzle (manual)
 // ============================================
 
 async function savePuzzle(puzzleId) {
@@ -836,10 +943,15 @@ async function savePuzzle(puzzleId) {
     } : null
   };
 
+  // Clear auto-save before manual save
+  clearAutoSave();
+
   try {
     if (puzzleId) {
       await update('puzzles', puzzleId, data);
       showToast('Puzzle actualizado correctamente', 'success');
+      // Re-enable auto-save after manual save
+      setupAutoSave(puzzleId);
     } else {
       const newId = await create('puzzles', data);
       showToast('Puzzle creado correctamente', 'success');

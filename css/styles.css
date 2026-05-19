@@ -1361,6 +1361,26 @@ a:hover {
   margin-left: auto;
   display: flex;
   gap: 8px;
+  align-items: center;
+}
+
+/* ---------- Auto-save indicator ---------- */
+.autosave-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  white-space: nowrap;
+  animation: autosave-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes autosave-pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
 }
 
 /* ---------- Flag Toggle ---------- */

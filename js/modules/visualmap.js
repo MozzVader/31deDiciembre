@@ -110,10 +110,10 @@ export async function renderVisualMap() {
             <svg id="map-svg" width="${CANVAS_W}" height="${CANVAS_H}" xmlns="http://www.w3.org/2000/svg">
               <defs>
                 <marker id="map-arrow" markerWidth="${ARROW_SIZE}" markerHeight="8" refX="${ARROW_SIZE - 1}" refY="4" orient="auto-start-reverse">
-                  <path d="M0,1 L${ARROW_SIZE},4 L0,7 L2.5,4 Z" fill="color-mix(in srgb, var(--accent) 60%, transparent)" />
+                  <path d="M0,1 L${ARROW_SIZE},4 L0,7 L2.5,4 Z" fill="#6bc7a8" />
                 </marker>
                 <marker id="map-arrow-cond" markerWidth="${ARROW_SIZE}" markerHeight="8" refX="${ARROW_SIZE - 1}" refY="4" orient="auto-start-reverse">
-                  <path d="M0,1 L${ARROW_SIZE},4 L0,7 L2.5,4 Z" fill="color-mix(in srgb, var(--warning) 70%, transparent)" />
+                  <path d="M0,1 L${ARROW_SIZE},4 L0,7 L2.5,4 Z" fill="#c49230" />
                 </marker>
               </defs>
             </svg>
@@ -290,8 +290,9 @@ function renderSVGConnections(connections, positions, connectedIds) {
       const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
       line.setAttribute('x1', x1); line.setAttribute('y1', y1);
       line.setAttribute('x2', x2); line.setAttribute('y2', y2);
-      line.setAttribute('stroke', isCond ? 'color-mix(in srgb, var(--warning) 60%, transparent)' : 'color-mix(in srgb, var(--accent) 50%, transparent)');
+      line.setAttribute('stroke', isCond ? '#a87830' : '#5aaa8e');
       line.setAttribute('stroke-width', '2');
+      line.setAttribute('stroke-opacity', '0.7');
       if (isCond) {
         line.setAttribute('stroke-dasharray', '8,5');
       }
@@ -312,14 +313,15 @@ function renderSVGConnections(connections, positions, connectedIds) {
         bg.setAttribute('width', textLen);
         bg.setAttribute('height', 16);
         bg.setAttribute('rx', '3');
-        bg.setAttribute('fill', 'color-mix(in srgb, var(--bg-primary) 90%, transparent)');
+        bg.setAttribute('fill', '#1a1b2e');
+        bg.setAttribute('fill-opacity', '0.9');
         group.appendChild(bg);
 
         labelEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         labelEl.setAttribute('x', midX);
         labelEl.setAttribute('y', midY + 3);
         labelEl.setAttribute('text-anchor', 'middle');
-        labelEl.setAttribute('fill', isCond ? 'var(--warning)' : 'var(--text-muted)');
+        labelEl.setAttribute('fill', isCond ? '#c49230' : '#8891a5');
         labelEl.setAttribute('font-size', '11');
         labelEl.setAttribute('font-family', 'Inter, sans-serif');
         labelEl.textContent = conn.direction;
@@ -712,6 +714,12 @@ function setupInteraction(rooms, roomMap, connections, positions, connectedIds) 
     }
 
     if (dragState) {
+      // Track if it's a real drag (more than 5px movement)
+      const dx = e.clientX - dragStartX;
+      const dy = e.clientY - dragStartY;
+      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+        didDrag = true;
+      }
       const rect = viewport.getBoundingClientRect();
       const canvasX = (e.clientX - rect.left - translateX) / scale;
       const canvasY = (e.clientY - rect.top - translateY) / scale;
@@ -766,6 +774,9 @@ function setupInteraction(rooms, roomMap, connections, positions, connectedIds) 
   }, { passive: false });
 
   // ---- Node Drag ----
+  let dragStartX = 0, dragStartY = 0;
+  let didDrag = false;
+
   viewport.addEventListener('mousedown', (e) => {
     const nodeEl = e.target.closest('.map-node');
     if (!nodeEl || e.button !== 0) return;
@@ -779,6 +790,10 @@ function setupInteraction(rooms, roomMap, connections, positions, connectedIds) 
     const nodeLeft = parseInt(nodeEl.style.left) || 0;
     const nodeTop = parseInt(nodeEl.style.top) || 0;
 
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    didDrag = false;
+
     dragState = {
       roomId,
       nodeEl,
@@ -787,11 +802,6 @@ function setupInteraction(rooms, roomMap, connections, positions, connectedIds) 
     };
 
     nodeEl.classList.add('map-node-dragging');
-
-    // Highlight
-    document.querySelectorAll('.map-node').forEach(n => n.classList.remove('map-node-selected'));
-    nodeEl.classList.add('map-node-selected');
-    selectedRoomId = roomId;
   });
 
   document.addEventListener('mouseup', () => {
@@ -800,17 +810,20 @@ function setupInteraction(rooms, roomMap, connections, positions, connectedIds) 
     }
   });
 
-  // ---- Node Click (popup) ----
+  // ---- Node Click (popup) — fires after mouseup, only if no real drag happened ----
   viewport.addEventListener('click', (e) => {
     const nodeEl = e.target.closest('.map-node');
     if (!nodeEl) return;
 
     const roomId = nodeEl.dataset.roomId;
-    if (selectedRoomId === roomId) return; // Already selected
 
-    selectedRoomId = roomId;
+    // If we dragged more than 5px, it was a drag, not a click
+    if (didDrag) return;
+
+    // Highlight
     document.querySelectorAll('.map-node').forEach(n => n.classList.remove('map-node-selected'));
     nodeEl.classList.add('map-node-selected');
+    selectedRoomId = roomId;
 
     showRoomPopup(roomId, e.clientX, e.clientY);
   });

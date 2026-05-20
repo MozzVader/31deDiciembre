@@ -2,7 +2,7 @@
 // Modulo: Gallery — Referencias Visuales / Moodboard
 // ============================================
 import { getAll, getOne, create, update, remove } from '../db.js';
-import { renderWorkspace, setBreadcrumbs, showToast, showModal, closeModal, escapeHtml, confirm } from '../ui.js';
+import { renderWorkspace, setBreadcrumbs, showToast, showModal, closeModal, escapeHtml, confirm, updateBadge } from '../ui.js';
 
 // ============================================
 // Constants

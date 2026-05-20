@@ -1,9 +1,9 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.4-blue?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/version-2.0-blue?style=for-the-badge" alt="Version">
   <img src="https://img.shields.io/badge/license-CC%20BY--NC--ND%204.0-lightgrey?style=for-the-badge" alt="License">
   <img src="https://img.shields.io/badge/status-en%20desarrollo-orange?style=for-the-badge" alt="Status">
-  <img src="https://img.shields.io/badge/commits-43-green?style=for-the-badge" alt="Commits">
-  <img src="https://img.shields.io/badge/LOC-9.400%2B-blueviolet?style=for-the-badge" alt="Lines of Code">
+  <img src="https://img.shields.io/badge/commits-56-green?style=for-the-badge" alt="Commits">
+  <img src="https://img.shields.io/badge/LOC-14.600%2B-blueviolet?style=for-the-badge" alt="Lines of Code">
 </p>
 
 <h1 align="center">31 de Diciembre — Adventure Design Toolbox</h1>
@@ -49,13 +49,18 @@ Todo el flujo de autenticación se maneja en un screen dedicado antes de acceder
 |:-----:|--------|-------------|
 | 🏠 | **Dashboard** | Página de inicio con resumen del proyecto, estadísticas clickeables y últimas ediciones |
 | 🗺️ | **Habitaciones** | Espacios físicos con salidas direccionales, condiciones de desbloqueo y sistema completo de hotspots interactivos |
+| 🕸️ | **Mapa Visual** | Grafo interactivo de habitaciones con layout force-directed, drag & drop, pan & zoom, salidas condicionales y detección de habitaciones aisladas |
 | 👥 | **Personajes** | NPCs con bio, rol, ubicación inicial, avatar y diálogo por defecto |
 | 🎯 | **Inventario & Flags** | Items combinables con sistema `consumesSelf` / `consumesTarget`, interacciones propias y variables de estado |
+| 🧩 | **Puzzle Designer** | Diseñador de puzzles con pasos encadenados, condiciones, acciones y auto-save cada 60s |
 | ⏱️ | **Cronología** | Timeline de eventos con triggers condicionales y acciones contextuales |
 | 💬 | **Diálogos** | Árboles de diálogo con nodos, respuestas del jugador, condiciones y acciones |
+| 🖼️ | **Gallery** | Moodboard de referencias visuales con categorías, tags, búsqueda, lightbox y upload con resize automático |
+| 🎧 | **Biblioteca de Audio** | Gestión de música y efectos de sonido con organización por tipo, tags y búsqueda |
 | 📝 | **Notas Sueltas** | Editor Markdown con toolbar WYSIWYG, preview en vivo, auto-save, badges de estado y To-Do list integrada |
 | 🎬 | **Sprite Viewer** | Visor/probador de spritesheets con controles de grilla, velocidad, zoom y selector de dirección |
 | 🏆 | **Hitos del Proyecto** | Línea temporal vertical con milestones categorizados (Arte, Código, Diseño, Historia, General) |
+| ⌨️ | **Command Palette** | Búsqueda rápida universal (Ctrl+K) para navegar módulos, buscar entidades y ejecutar acciones |
 
 ### Dashboard
 
@@ -158,7 +163,60 @@ Línea temporal vertical para registrar los momentos importantes del desarrollo:
 - Ordenado por fecha descendente (más reciente primero)
 - CRUD completo: crear, editar, eliminar hitos
 
-## Features de UX
+### Mapa Visual
+
+Grafo interactivo que visualiza la estructura de habitaciones del juego:
+
+- **Layout force-directed** con 180 iteraciones de simulación física para posicionamiento automático
+- **Drag & drop** de nodos — las posiciones se guardan en Firestore
+- **Pan & zoom** con scroll del mouse (zoom hacia el cursor) y arrastre del fondo
+- **Flechas bidireccionales** separadas para evitar superposición entre habitaciones conectadas
+- **Salidas condicionales** resaltadas con líneas punteadas naranjas
+- **Detección de habitaciones aisladas** (sin conexiones)
+- **Popup de detalle** al hacer click en una habitación (nombre, descripción, salidas, hotspots)
+- **Toolbar**: auto-layout, fit view, zoom +/-
+- **Leyenda** con tipos de conexión
+
+### Puzzle Designer
+
+Diseñador de puzzles con pasos encadenados y sistema de condiciones/acciones:
+
+- **Pasos encadenados** — cada puzzle se compone de pasos ordenados con nombre y descripción
+- **Condiciones y acciones** por paso (mismos tipos que el resto del sistema)
+- **Auto-save** cada 60 segundos para evitar pérdida de datos por navegación accidental
+- Indicador visual de "Guardando..." durante el proceso
+- Ubicado en la sección **Mundo** junto a Inventario & Flags
+
+### Gallery — Moodboard
+
+Referencia visual para el diseño artístico de la aventura:
+
+- **7 categorías**: Personajes, Ambientes, Interfaces UI, Paletas, Concept Art, Referencias, Misceláneo
+- **Upload con resize** — las imágenes se redimensionan automáticamente a max 1200px y se comprimen a JPEG 80% antes de guardar
+- **Drag & drop** y selector de archivos (JPG, PNG, GIF, WebP, max 5MB)
+- **URL externa** como alternativa al upload
+- **Tags** para organización y búsqueda
+- **Búsqueda por** nombre, descripción o tag con debounce de 200ms
+- **Filtros por categoría** con contadores
+- **Lightbox** para vista previa a pantalla completa
+- **Habitación relacionada** — vincular imágenes a habitaciones específicas
+
+### Biblioteca de Audio
+
+Gestión de música y efectos de sonido del juego:
+
+- **Organización por tipo**: Música, Efectos de sonido, Ambiente, Voz
+- **Tags** para categorización adicional
+- **Búsqueda** por nombre, descripción o tag
+
+### Command Palette
+
+Búsqueda rápida universal accesible con **Ctrl+K**:
+
+- Buscar entidades por nombre en cualquier módulo
+- Navegación rápida entre secciones
+- Acciones contextuales (crear nuevo en cada módulo)
+- fuzzy search con resaltado de coincidencias
 
 ### Quick Create Inline (+)
 
@@ -193,6 +251,12 @@ Cada entidad tiene un **slug** auto-generado y editable manualmente, usado como 
 | `dlg_` | Diálogo | `dlg_monologo_inicial` |
 | `node_` | Nodo de diálogo | `node_uffff_31_de_diciembre` |
 | `hotspot_` | Hotspot | `hotspot_cubetera` |
+| `audio_` | Audio | `audio_musica_bar` |
+| `puzzle_` | Puzzle | `puzzle_combinar_fernet` |
+
+### Badges del Sidebar
+
+Los contadores del sidebar se cargan automáticamente al iniciar sesión, sin necesidad de navegar a cada sección. Se consultan en paralelo mediante `getCount()` para minimizar el tiempo de carga.
 
 ## Export
 
@@ -280,11 +344,11 @@ service cloud.firestore {
 │   └── styles.css          # Dark mode stylesheet
 ├── js/
 │   ├── config.js           # Firebase credentials
-│   ├── db.js               # Firestore CRUD + helpers
+│   ├── db.js               # Firestore CRUD + helpers + getCount
 │   ├── auth.js             # Login, registro, recovery de contraseña
-│   ├── ui.js               # Toasts, modals, combobox, quick create, breadcrumbs
+│   ├── ui.js               # Toasts, modals, combobox, quick create, breadcrumbs, badges
 │   ├── router.js           # Hash-based SPA router
-│   ├── app.js              # Main entry + route registration
+│   ├── app.js              # Main entry + route registration + badge refresh
 │   ├── export.js           # Slug-based JSON export con preview/download/copy
 │   └── modules/
 │       ├── rooms.js        # Habitaciones + hotspots + interacciones + acciones
@@ -292,10 +356,15 @@ service cloud.firestore {
 │       ├── items.js        # Inventario + combinaciones + interacciones + flags
 │       ├── timeline.js     # Cronología / Triggers / Acciones contextuales
 │       ├── dialogues.js    # Diálogos + nodos + condiciones + acciones
+│       ├── visualmap.js    # Mapa visual de habitaciones (grafo interactivo)
+│       ├── puzzles.js      # Puzzle designer con pasos encadenados + auto-save
+│       ├── gallery.js      # Moodboard de referencias visuales + categorías + tags
+│       ├── audio.js        # Biblioteca de audio (música, SFX, ambiente, voz)
 │       ├── notes.js        # Notas Markdown + To-Do list integrada
 │       ├── dashboard.js    # Página de inicio con resumen y estadísticas
 │       ├── spritesheet.js  # Visor/probador de spritesheets animados
-│       └── milestones.js   # Hitos del proyecto (timeline vertical de desarrollo)
+│       ├── milestones.js   # Hitos del proyecto (timeline vertical de desarrollo)
+│       └── command-palette.js # Búsqueda rápida universal (Ctrl+K)
 └── assets/
     └── favicon.svg
 ```

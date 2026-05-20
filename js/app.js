@@ -13,6 +13,7 @@ import { renderMilestonesList, renderMilestoneForm } from './modules/milestones.
 import { renderAudioList, renderAudioForm } from './modules/audio.js';
 import { renderPuzzlesList, renderPuzzleForm } from './modules/puzzles.js';
 import { renderVisualMap } from './modules/visualmap.js';
+import { renderGalleryList, renderGalleryForm } from './modules/gallery.js';
 import { renderDashboard } from './modules/dashboard.js';
 import { initCommandPalette } from './modules/command-palette.js';
 import { exportProject } from './export.js';
@@ -122,6 +123,17 @@ registerRoute('dialogues', ({ action }) => {
 
 // Visual Map
 registerRoute('visualmap', () => renderVisualMap());
+
+// Gallery
+registerRoute('gallery', ({ action }) => {
+  if (action === 'new') {
+    renderGalleryForm(null);
+  } else if (action) {
+    renderGalleryForm(action);
+  } else {
+    renderGalleryList();
+  }
+});
 
 // Puzzles
 registerRoute('puzzles', ({ action }) => {

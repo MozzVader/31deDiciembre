@@ -13,7 +13,7 @@ export async function exportProject() {
 
   try {
     // Fetch everything in parallel
-    const [rooms, characters, items, flags, events, dialogues, audioTracks, puzzles] = await Promise.all([
+    const [rooms, characters, items, flags, events, dialogues, audioTracks, galleryImages, puzzles] = await Promise.all([
       getAll('rooms'),
       getAll('characters'),
       getAll('items'),
@@ -21,6 +21,7 @@ export async function exportProject() {
       getAll('timeline'),
       getAll('dialogues'),
       getAll('audio'),
+      getAll('gallery'),
       getAll('puzzles')
     ]);
 
@@ -226,6 +227,15 @@ export async function exportProject() {
         description: track.description || ''
       })),
 
+      gallery: galleryImages.map(img => ({
+        name: img.name || '',
+        imageUrl: img.imageUrl || '',
+        category: img.category || '',
+        room: img.room || '',
+        description: img.description || '',
+        tags: img.tags || []
+      })),
+
       puzzles: puzzles.map(puzzle => ({
         name: puzzle.name || '',
         description: puzzle.description || '',
@@ -260,7 +270,7 @@ export async function exportProject() {
     const body = `
       <div style="margin-bottom:12px;">
         <span class="text-xs text-muted">
-          <i class="fa-solid fa-box"></i> ${rooms.length} habitaciones, ${characters.length} personajes, ${items.length} items, ${flags.length} flags, ${events.length} triggers, ${dialogues.length} diálogos, ${audioTracks.length} pistas de audio, ${puzzles.length} puzzles
+          <i class="fa-solid fa-box"></i> ${rooms.length} habitaciones, ${characters.length} personajes, ${items.length} items, ${flags.length} flags, ${events.length} triggers, ${dialogues.length} diálogos, ${audioTracks.length} pistas de audio, ${galleryImages.length} imágenes, ${puzzles.length} puzzles
         </span>
       </div>
       <div class="json-preview" id="json-preview-content">${highlighted}</div>

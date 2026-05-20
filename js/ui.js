@@ -2,6 +2,8 @@
 // UI Utilities
 // ============================================
 
+import { getCount } from './db.js';
+
 /**
  * Show a toast notification
  */
@@ -103,6 +105,15 @@ export function updateBadge(module, count) {
     badge.textContent = count;
     badge.style.display = count > 0 ? 'inline' : 'none';
   }
+}
+
+/**
+ * Refresh all sidebar badge counts from Firestore
+ */
+export async function refreshAllBadges() {
+  const badgeModules = ['rooms', 'characters', 'items', 'puzzles', 'timeline', 'dialogues', 'gallery', 'audio'];
+  const counts = await Promise.all(badgeModules.map(m => getCount(m)));
+  counts.forEach((count, i) => updateBadge(badgeModules[i], count));
 }
 
 /**

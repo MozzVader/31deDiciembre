@@ -90,6 +90,15 @@ function nodeDocRef(dialogueId, nodeId) {
 // ============================================
 
 /**
+ * Get document count from a subcollection (lightweight, no orderBy)
+ */
+export async function getCount(subcollection) {
+  await ensureAuth();
+  const snapshot = await getDocs(subcolRef(subcollection));
+  return snapshot.size;
+}
+
+/**
  * Get all documents from a subcollection
  */
 export async function getAll(subcollection) {

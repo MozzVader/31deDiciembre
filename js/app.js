@@ -17,7 +17,7 @@ import { renderGalleryList, renderGalleryForm } from './modules/gallery.js';
 import { renderDashboard } from './modules/dashboard.js';
 import { initCommandPalette } from './modules/command-palette.js';
 import { exportProject } from './export.js';
-import { setActiveNav, closeModal } from './ui.js';
+import { setActiveNav, closeModal, refreshAllBadges } from './ui.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import { auth } from './db.js';
 import { showAuth, hideAuth, setupLogout } from './auth.js';
@@ -31,6 +31,8 @@ onAuthStateChanged(auth, (user) => {
     hideAuth();
     // Show user email in topbar
     updateUserDisplay(user);
+    // Load badge counts in background
+    refreshAllBadges();
     // Initialize router only after first auth
     if (!window._routerInitialized) {
       window._routerInitialized = true;

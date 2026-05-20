@@ -110,7 +110,7 @@ export async function renderVisualMap() {
             <svg id="map-svg" width="${CANVAS_W}" height="${CANVAS_H}" xmlns="http://www.w3.org/2000/svg">
               <defs>
                 <marker id="map-arrow" markerWidth="${ARROW_SIZE}" markerHeight="8" refX="${ARROW_SIZE - 1}" refY="4" orient="auto-start-reverse">
-                  <path d="M0,1 L${ARROW_SIZE},4 L0,7 L2.5,4 Z" fill="#6bc7a8" />
+                  <path d="M0,1 L${ARROW_SIZE},4 L0,7 L2.5,4 Z" fill="#7c5cfc" />
                 </marker>
                 <marker id="map-arrow-cond" markerWidth="${ARROW_SIZE}" markerHeight="8" refX="${ARROW_SIZE - 1}" refY="4" orient="auto-start-reverse">
                   <path d="M0,1 L${ARROW_SIZE},4 L0,7 L2.5,4 Z" fill="#c49230" />
@@ -290,7 +290,7 @@ function renderSVGConnections(connections, positions, connectedIds) {
       const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
       line.setAttribute('x1', x1); line.setAttribute('y1', y1);
       line.setAttribute('x2', x2); line.setAttribute('y2', y2);
-      line.setAttribute('stroke', isCond ? '#a87830' : '#5aaa8e');
+      line.setAttribute('stroke', isCond ? '#a87830' : '#7c5cfc');
       line.setAttribute('stroke-width', '2');
       line.setAttribute('stroke-opacity', '0.7');
       if (isCond) {
